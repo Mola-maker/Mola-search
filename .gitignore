@@ -1,5 +1,6 @@
 # Runtime data and build outputs
 data/
+agent-home/
 *.exe
 *.log
 __pycache__/
@@ -7,6 +8,21 @@ __pycache__/
 .env
 .omc/
 .playwright-mcp/
+
+# Agent worktrees: each is an embedded checkout of its own branch, so a
+# gitlink here would point at a local-only commit no cloner can fetch.
+.claude/
+
+# Draft screenshots that render the Windows user name in the app's own
+# "keys are written to ..." line. Superseded; nothing links to them.
+demo/2026-10-25/legacy/
+
+# Scratch dumps from a single debugging run, not evidence.
+/_demo2.json
+/_q2.json
+
+# The push-readiness audit names this machine's own paths and services.
+demo/2026-10-25/pii-secret-audit.md
 
 # The upstream source tree is its own repository (fork baseline in _ref/magpie)
 _ref/

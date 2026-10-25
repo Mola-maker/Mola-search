@@ -1,0 +1,91 @@
+{
+ "dataset": "google/frames-benchmark",
+ "split": "test",
+ "data_source_url": "https://datasets-server.huggingface.co/rows?dataset=google%2Fframes-benchmark&config=default&split=test",
+ "mode": "M13",
+ "debate": false,
+ "run_date_utc": "2026-10-25T06:03:30.979187+00:00",
+ "fetched_questions": 20,
+ "N_included": 20,
+ "N_scored": 20,
+ "N_errors": 0,
+ "N_excluded": 0,
+ "excluded": [],
+ "skipped_redline": [],
+ "accuracy_judge": 0.15,
+ "accuracy_match": 0.15,
+ "judge_model": "deepseek-flash",
+ "judge_temperature": 0,
+ "latency_ms": {
+  "mean": 2642.8,
+  "median": 1903.5,
+  "p95": 5599,
+  "min": 1486,
+  "max": 7578
+ },
+ "mean_citations": 20,
+ "mean_authoritative_citations": 4.55,
+ "total_real_requests": 770,
+ "channel_distribution": {
+  "tencent": 414,
+  "bing": 240,
+  "youfree": 84,
+  "arxiv": 25,
+  "ddg": 7
+ },
+ "verdicts": {
+  "REFUTED": 1,
+  "UNVERIFIED": 17,
+  "VERIFIED": 2
+ },
+ "accuracy_match_strict": 0.1,
+ "judge_false_positive_suspects": [
+  {
+   "query_id": 12,
+   "gold": "Christmas",
+   "judge_raw": "CORRECT",
+   "gold_lexical_occurrences": 0
+  },
+  {
+   "query_id": 14,
+   "gold": "This was Mesut Ozil.",
+   "judge_raw": "CORRECT",
+   "gold_lexical_occurrences": 0
+  }
+ ],
+ "judge_correct_lexically_supported": 1,
+ "string_match_artifacts": [
+  {
+   "query_id": 2,
+   "gold": "87"
+  }
+ ],
+ "updated_at_utc": "2026-10-25T06:08:35.006991+00:00",
+ "accuracy_match_credible": 0.0,
+ "short_numeric_golds": [
+  {
+   "query_id": 2,
+   "gold": "87",
+   "strict_hit": 0,
+   "lexical_occurrences": 2
+  },
+  {
+   "query_id": 7,
+   "gold": "2",
+   "strict_hit": 1,
+   "lexical_occurrences": 84
+  },
+  {
+   "query_id": 8,
+   "gold": "4",
+   "strict_hit": 1,
+   "lexical_occurrences": 9
+  },
+  {
+   "query_id": 16,
+   "gold": "28",
+   "strict_hit": 0,
+   "lexical_occurrences": 0
+  }
+ ]
+}

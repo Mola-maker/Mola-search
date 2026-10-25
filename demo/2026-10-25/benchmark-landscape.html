@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 搜索能力基准图鉴 · 2026-10</title>
+<style>
+  :root{
+    --paper:#f7f8fb; --card:#fff; --ink:#16202f; --muted:#61708a; --line:#dfe5ef;
+    --blue:#1f5fd0; --blue-soft:#e8efff; --pink:#e85d8a; --pink-soft:#fdeaf1;
+    --green:#2f9e6b; --green-soft:#e7f6ee; --amber:#b7791f; --amber-soft:#fdf3e2;
+    --violet:#6b4fd8; --violet-soft:#efeaff;
+    --r:18px; --shadow:0 10px 30px rgba(22,32,47,.07), 0 2px 6px rgba(22,32,47,.04);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#0e1420; --card:#151d2b; --ink:#e8eef8; --muted:#93a1b8; --line:#26324a;
+      --blue:#7aa7ff; --blue-soft:#1a2842; --pink:#ff8fb2; --pink-soft:#331b25;
+      --green:#63d3a0; --green-soft:#122a20; --amber:#e5b567; --amber-soft:#2b2314;
+      --violet:#a794ff; --violet-soft:#231e3d;
+      --shadow:0 12px 34px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.5 "Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:1320px;margin:0 auto;padding:40px 28px 56px}
+  header{display:flex;gap:22px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:26px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 8px;letter-spacing:.2px}
+  h1 em{font-style:normal;color:var(--blue)}
+  .sub{color:var(--muted);max-width:760px;font-size:14px}
+  .stamp{padding:7px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px;background:var(--card)}
+  .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:20px}
+  .card h2{font-size:15px;margin:0 0 4px;letter-spacing:.3px}
+  .card .hint{color:var(--muted);font-size:12.5px;margin:0 0 16px}
+  .bars{display:flex;flex-direction:column;gap:10px}
+  .bar{display:grid;grid-template-columns:128px 1fr 66px;gap:10px;align-items:center;font-size:12.5px}
+  .bar b{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .track{height:12px;border-radius:999px;background:var(--blue-soft);overflow:hidden}
+  .fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--violet));min-width:4px}
+  .bar span{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  .note{font-size:11.5px;color:var(--muted);margin-top:12px}
+
+  .matrix{overflow:auto;margin-top:4px}
+  table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px;min-width:760px}
+  th,td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--card)}
+  thead th{color:var(--muted);font-weight:600;font-size:11.5px;letter-spacing:.2px}
+  tbody tr:hover td{background:var(--blue-soft)}
+  tbody tr:hover td:first-child{background:var(--blue-soft)}
+  .yes{color:var(--green);font-weight:700}
+  .part{color:var(--amber);font-weight:700}
+  .no{color:var(--muted);opacity:.5}
+  .pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;background:var(--blue-soft);color:var(--blue);margin-left:6px}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+  @media(max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.cards{grid-template-columns:1fr}}
+  .bm{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--card)}
+  .bm h3{margin:0 0 4px;font-size:14px}
+  .bm .org{color:var(--muted);font-size:11.5px;margin-bottom:8px}
+  .bm p{margin:0;font-size:12.5px;color:var(--ink)}
+  .bm .tags{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-size:10.5px;padding:2px 7px;border-radius:999px;background:var(--paper);border:1px solid var(--line);color:var(--muted)}
+  .tag.b{background:var(--blue-soft);border-color:transparent;color:var(--blue)}
+  .tag.p{background:var(--pink-soft);border-color:transparent;color:var(--pink)}
+  .tag.g{background:var(--green-soft);border-color:transparent;color:var(--green)}
+
+  .run{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}
+  @media(max-width:900px){.run{grid-template-columns:repeat(2,1fr)}}
+  .kpi{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--card)}
+  .kpi .n{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue)}
+  .kpi .l{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .kpi.pink .n{color:var(--pink)}
+  .kpi.green .n{color:var(--green)}
+  footer{margin-top:26px;color:var(--muted);font-size:11.5px;line-height:1.7}
+  footer a{color:var(--blue);text-decoration:none}
+  .srcline{display:flex;flex-wrap:wrap;gap:10px 18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>AI 搜索能力<em>基准图鉴</em></h1>
+      <div class="sub">上半部分是 <b>MolaSearch 本机实测</b>：FRAMES 公开题抽样、逐题跑真实检索、DeepSeek 判分，数字来自 <code>benchmark/frames-summary.json</code>。下半部分是各基准的公开设定，用作坐标，<b>不含任何编造的 MolaSearch 分数</b>。</div>
+    </div>
+    <div class="stamp">整理于 2026-10-25 · 来源见页脚</div>
+  </header>
+
+  <section class="card" id="molaScore" style="margin-bottom:18px">
+    <h2>MolaSearch 实测 · FRAMES 公开题抽样 <span class="pill" id="molaN">读取中…</span></h2>
+    <p class="hint" id="molaMeta">数据来自 benchmark/frames-summary.json；每条都是本机真实检索，判分模型为 DeepSeek。</p>
+    <div class="run" id="molaKpis">
+      <div class="kpi green"><div class="n" data-k="acc">—</div><div class="l">判分准确率（DeepSeek，上界）</div></div>
+      <div class="kpi"><div class="n" data-k="match">—</div><div class="l">可信命中率（词边界，去纯数字）</div></div>
+      <div class="kpi"><div class="n" data-k="n">—</div><div class="l">计分 / 抓取题数</div></div>
+      <div class="kpi"><div class="n" data-k="lat">—</div><div class="l">单题端到端中位数</div></div>
+      <div class="kpi pink"><div class="n" data-k="cit">—</div><div class="l">平均引用 / 权威引用</div></div>
+    </div>
+    <p class="note" id="molaAudit" style="display:none"></p>
+    <div class="matrix" style="margin-top:16px">
+      <table>
+        <thead><tr><th>#</th><th>问题</th><th>标准答案</th><th>判分</th><th>可信命中</th><th>引用</th><th>耗时</th></tr></thead>
+        <tbody id="molaRows"><tr><td colspan="6" style="color:var(--muted)">还没有实测结果文件。</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note" id="molaNote">小样本、真实网页会漂移，只能当作方向性证据，不是排行榜。</p>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>任务规模</h2>
+      <p class="hint">公开任务数（部分基准含多档难度/多语言子集）。</p>
+      <div class="bars" id="bars"></div>
+      <p class="note">条形只比较“有多少题”，不比较难度或分数。BrowseComp‑Plus 复用 BrowseComp 的 1,266 题并配固定语料。</p>
+    </section>
+
+    <section class="card">
+      <h2>压力点分布</h2>
+      <p class="hint">每个基准主要卡住模型的哪一类失败。</p>
+      <div class="bars" id="focus"></div>
+      <p class="note">计数为本次整理中该基准被论文强调的核心能力标签数，只用于版式，不是评分。</p>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:18px">
+    <h2>能力覆盖矩阵</h2>
+    <p class="hint">✓ 明确评测 · ◐ 部分覆盖/可配置 · – 未作为重点。</p>
+    <div class="matrix">
+      <table>
+        <thead>
+          <tr>
+            <th>基准</th><th>实时网页</th><th>多跳</th><th>引用可信</th><th>中文</th><th>多模态</th><th>诚实拒答</th><th>长程</th><th>Agent 检索</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <h2>逐项速览</h2>
+    <p class="hint">按公开论文/官网的原始设定整理。</p>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <h2>本次真实检索跑出的数字 <span class="pill">M13 · 元宝 SearchPro 为主</span></h2>
+    <p class="hint">问题「2026年诺贝尔化学奖授予了哪些科学家」，2026‑10‑25 05:47 UTC，本机 MolaSearch。</p>
+    <div class="run">
+      <div class="kpi green"><div class="n">13/13</div><div class="l">通道在线（本次 36 次真实请求）</div></div>
+      <div class="kpi"><div class="n">20</div><div class="l">引用（权威 14 / 低质 4）</div></div>
+      <div class="kpi"><div class="n">6507 ms</div><div class="l">端到端耗时</div></div>
+      <div class="kpi pink"><div class="n">UNVERIFIED</div><div class="l">判定：证据不足以下定论</div></div>
+      <div class="kpi"><div class="n">100</div><div class="l">可信分（正 0.8 / 反 0.0）</div></div>
+    </div>
+    <p class="note">同一问题在 M11 模式复跑：2.8 s、20 条引用、10 条来自腾讯云 WSA SearchPro；两次轨迹 JSON 已存于 demo/2026-10-25/traces/。</p>
+  </section>
+
+  <footer>
+    <div class="srcline">
+      <span><a href="https://openai.com/index/browsecomp/">BrowseComp</a> · OpenAI, 2025 · 1,266 题</span>
+      <span><a href="https://deepresearch-bench.github.io/">DeepResearch Bench (RACE/FACT)</a> · 2025 · 100 题 / 22 领域</span>
+      <span><a href="https://arxiv.org/html/2506.06287">Deep Research Bench (FutureSearch)</a> · 89 实例 / 8 类</span>
+      <span><a href="https://proceedings.iclr.cc/paper_files/paper/2024/file/25ae35b5b1738d80f1f03a8713e405ec-Paper-Conference.pdf">GAIA</a> · 2024 · 466 题</span>
+      <span><a href="https://aclanthology.org/2025.acl-long.508/">WebWalkerQA</a> · ACL 2025</span>
+      <span><a href="https://arxiv.org/pdf/2506.01062v2.pdf">SealQA</a> · 2025</span>
+      <span><a href="https://aclanthology.org/2024.emnlp-main.505.pdf">AssistantBench</a> · EMNLP 2024 · 214 题</span>
+      <span><a href="https://arxiv.org/html/2606.12837">LoHoSearch</a> · 2026 · 544 题 / 11 领域</span>
+      <span><a href="https://arxiv.org/html/2602.19127v1">AgenticRAGTracer</a> · 2026 · 1,305 题</span>
+      <span><a href="https://arxiv.org/html/2603.00873">MC-Search</a> · 2026 · 3,333 例</span>
+      <span><a href="https://arxiv.org/html/2512.07436v1">LocalSearchBench</a> · 2026 · 300 题</span>
+      <span><a href="https://arxiv.org/abs/2604.22436">AgentSearchBench</a> · 2026 · ~10k agents</span>
+      <span><a href="https://arxiv.org/abs/2605.22219">SGR-Bench</a> · 2026 · 100 题</span>
+      <span><a href="https://mlanthology.org/iclr/2026/song2026iclr-demystifying/">WebDetective</a> · ICLR 2026</span>
+      <span><a href="https://arxiv.org/html/2508.06600v1">BrowseComp-Plus</a> · 2025</span>
+    </div>
+    <p style="margin:12px 0 0">“中文”“多模态”等标记按各基准公开描述整理；未标注的基准不作推断。分数的横向比较需要同一时间、同一工具与同一判分器，本图刻意不提供。</p>
+  </footer>
+</div>
+
+<script>
+const benchmarks = [
+  {name:"MC-Search", tasks:3333, org:"2026 · 多模态 agentic RAG", stress:["多跳","多模态"], metric:"F1 / 逐跳命中 HPS"},
+  {name:"AgenticRAGTracer", tasks:1305, org:"2026 · 逐跳诊断", stress:["多跳","Agent"], metric:"EM（最难题 GPT-5 22.6%）"},
+  {name:"BrowseComp (+Plus)", tasks:1266, org:"OpenAI 2025 · 难找事实", stress:["实时网页","长程"], metric:"短答案准确率"},
+  {name:"LoHoSearch", tasks:544, org:"2026 · 长程搜索", stress:["长程","多跳"], metric:"准确率（最强 34.74%）"},
+  {name:"GAIA", tasks:466, org:"Meta/HF 2024 · 通用助手", stress:["实时网页","多模态"], metric:"准确率（人 92%）"},
+  {name:"LocalSearchBench", tasks:300, org:"2026 · 本地生活", stress:["多跳","中文"], metric:"正确性/完整性/忠实度"},
+  {name:"AssistantBench", tasks:214, org:"EMNLP 2024 · 真实网页任务", stress:["实时网页","长程"], metric:"准确率（无模型 >25）"},
+  {name:"DeepResearch Bench", tasks:100, org:"2025 · PhD 研究题", stress:["引用","长程"], metric:"RACE 报告质量 + FACT 引用"},
+  {name:"SGR-Bench", tasks:100, org:"2026 · 站点状态门控", stress:["实时网页","Agent"], metric:"行级/项级 F1（最强 66.18%）"},
+  {name:"Deep Research Bench (FS)", tasks:89, org:"FutureSearch 2025 · 冻结网页", stress:["引用","长程"], metric:"任务完成 + 幻觉/工具分析"},
+  {name:"WebDetective", tasks:0, org:"ICLR 2026 · 无提示多跳", stress:["多跳","诚实拒答"], metric:"搜索充分性/知识利用/拒答"},
+  {name:"SealQA", tasks:0, org:"2025 · 冲突噪声结果", stress:["诚实拒答","多跳"], metric:"准确率（SEAL-0 O3 17.1%）"},
+  {name:"WebWalkerQA", tasks:0, org:"ACL 2025 · 站内遍历", stress:["实时网页","多跳"], metric:"问答准确率"},
+  {name:"AgentSearchBench", tasks:0, org:"2026 · 找 agent", stress:["Agent"], metric:"Precision/Recall/NDCG"},
+];
+const matrix = {
+  "BrowseComp":["yes","yes","no","part","no","no","yes","no"],
+  "BrowseComp-Plus":["part","yes","yes","no","no","no","yes","no"],
+  "DeepResearch Bench":["yes","yes","yes","yes","no","part","yes","no"],
+  "DRB (FutureSearch)":["part","yes","yes","no","no","part","yes","no"],
+  "GAIA":["yes","yes","no","no","yes","no","yes","no"],
+  "WebWalkerQA":["yes","yes","no","yes","part","no","part","no"],
+  "SealQA":["yes","yes","part","no","no","yes","no","no"],
+  "AssistantBench":["yes","yes","part","no","no","part","yes","no"],
+  "LoHoSearch":["yes","yes","no","part","no","no","yes","no"],
+  "AgenticRAGTracer":["part","yes","part","no","no","part","yes","no"],
+  "MC-Search":["part","yes","part","part","yes","part","yes","no"],
+  "LocalSearchBench":["yes","yes","part","yes","no","part","part","no"],
+  "WebDetective":["part","yes","part","no","no","yes","yes","no"],
+  "SGR-Bench":["yes","yes","part","no","no","part","part","part"],
+  "AgentSearchBench":["part","no","no","no","no","no","no","yes"],
+};
+const notes = {
+  "BrowseComp":"难找、可验证的短答案；考持续性浏览与搜索创意。",
+  "BrowseComp-Plus":"BrowseComp 的固定语料版，分离检索器与 agent 的贡献。",
+  "DeepResearch Bench":"100 道 PhD 级研究题；RACE 评报告、FACT 评引用。",
+  "DRB (FutureSearch)":"89 个多步研究实例，冻结网页环境，可复现。",
+  "GAIA":"真实助手问题，人 92% vs GPT-4 15%；含文件/多模态。",
+  "WebWalkerQA":"站内横向+纵向遍历，考逐层下钻取数。",
+  "SealQA":"检索结果冲突/噪声/无用；含 LongSeal 长上下文。",
+  "AssistantBench":"214 个真实耗时网页任务，自动判分。",
+  "LoHoSearch":"知识图谱生成的超难多跳题，最强模型 34.74%。",
+  "AgenticRAGTracer":"自动生成、逐跳可验证的 agentic RAG 诊断集。",
+  "MC-Search":"3,333 条多模态长推理链，平均 3.7 跳。",
+  "LocalSearchBench":"本地生活 300 个多跳任务，中文场景。",
+  "WebDetective":"无提示多跳 + 可控 Wiki 沙盒，分离搜索/利用/拒答。",
+  "SGR-Bench":"站点过滤器/视图/层级的状态门控检索。",
+  "AgentSearchBench":"近万个真实 agent 上做检索与重排。",
+};
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+// bars: only benchmarks with a public task count
+const max = Math.max(...benchmarks.map(b=>b.tasks));
+document.getElementById("bars").innerHTML = benchmarks.filter(b=>b.tasks>0).map(b=>`
+  <div class="bar"><b title="${esc(b.name)}">${esc(b.name)}</b>
+    <div class="track"><div class="fill" style="width:${Math.max(3,(b.tasks/max)*100).toFixed(1)}%"></div></div>
+    <span>${b.tasks.toLocaleString()}</span></div>`).join("");
+const focus = [
+  ["实时网页", benchmarks.filter(b=>b.stress.includes("实时网页")).length],
+  ["多跳", benchmarks.filter(b=>b.stress.includes("多跳")).length],
+  ["长程", benchmarks.filter(b=>b.stress.includes("长程")).length],
+  ["引用可信", benchmarks.filter(b=>b.stress.includes("引用")).length],
+  ["中文", benchmarks.filter(b=>b.stress.includes("中文")).length],
+  ["多模态", benchmarks.filter(b=>b.stress.includes("多模态")).length],
+  ["诚实拒答", benchmarks.filter(b=>b.stress.includes("诚实拒答")).length],
+  ["Agent 检索", benchmarks.filter(b=>b.stress.includes("Agent")).length],
+];
+const fmax = Math.max(...focus.map(f=>f[1]));
+document.getElementById("focus").innerHTML = focus.map(([n,c])=>`
+  <div class="bar"><b>${n}</b><div class="track"><div class="fill" style="width:${(c/fmax*100).toFixed(0)}%;background:linear-gradient(90deg,var(--pink),var(--violet))"></div></div><span>${c}</span></div>`).join("");
+const mark = v => v==="yes"?'<span class="yes">✓</span>':v==="part"?'<span class="part">◐</span>':'<span class="no">–</span>';
+document.getElementById("rows").innerHTML = Object.entries(matrix).map(([n,vals])=>`
+  <tr><td>${esc(n)}</td>${vals.map(v=>`<td>${mark(v)}</td>`).join("")}</tr>`).join("");
+document.getElementById("cards").innerHTML = benchmarks.map(b=>`
+  <div class="bm"><h3>${esc(b.name)}</h3><div class="org">${esc(b.org)}</div>
+    <p>${esc(notes[b.name]||"")}</p>
+    <div class="tags">${b.tasks?`<span class="tag b">${b.tasks.toLocaleString()} 题</span>`:""}${b.stress.map(s=>`<span class="tag ${s==="诚实拒答"?"g":s==="多模态"?"p":""}">${s}</span>`).join("")}<span class="tag">${esc(b.metric)}</span></div></div>`).join("");
+
+// MolaSearch's own run: read the files the bench runner wrote. Never invent.
+const pick = (o, ks) => { for (const k of ks) if (o && o[k] !== undefined && o[k] !== null) return o[k]; return null; };
+const pct = v => v===null ? "—" : (Number(v)<=1 ? (Number(v)*100).toFixed(1)+"%" : Number(v).toFixed(1)+"%");
+const ms = v => v===null ? "—" : Math.round(Number(v)).toLocaleString()+" ms";
+async function loadMola(){
+  const status = document.getElementById("molaMeta");
+  try{
+    const r = await fetch("benchmark/frames-summary.json?t="+Date.now());
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const s = await r.json();
+    const n = pick(s,["N_scored","n_scored","n_included","N_included","included","n","N"]);
+    const total = pick(s,["fetched_questions","n_fetched","N_fetched","fetched","total","N_total"]);
+    const acc = pick(s,["accuracy_judge","accuracyJudge","judge_accuracy","judgeAccuracy"]);
+    const match = pick(s,["accuracy_match_credible","accuracyMatchCredible","accuracy_match","accuracyMatch"]);
+    const latObj = s.latency_ms || s.latencyMs || {};
+    const lat = pick(s,["median_latency_ms","medianLatencyMs"]) ?? (latObj.median ?? null);
+    const cit = pick(s,["mean_citations","meanCitations","citations_mean"]);
+    const citAuth = pick(s,["mean_authoritative_citations","meanAuthoritativeCitations"]);
+    document.getElementById("molaN").textContent = n!==null ? `N=${n}` : "实测";
+    document.querySelector("#molaKpis [data-k=acc]").textContent = pct(acc);
+    document.querySelector("#molaKpis [data-k=match]").textContent = pct(match);
+    document.querySelector("#molaKpis [data-k=n]").textContent = n!==null ? `${n}${total!==null?" / "+total:""}` : "—";
+    document.querySelector("#molaKpis [data-k=lat]").textContent = ms(lat);
+    document.querySelector("#molaKpis [data-k=cit]").textContent = cit!==null ? (citAuth!==null ? Number(cit).toFixed(0)+" / "+Number(citAuth).toFixed(1) : Number(cit).toFixed(1)) : "—";
+    const suspects = pick(s,["judge_false_positive_suspects","judgeFalsePositives"]) || [];
+    const supported = pick(s,["judge_correct_lexically_supported","judgeCorrectLexicallySupported"]);
+    const reqs = pick(s,["total_real_requests","totalRealRequests"]);
+    const dist = pick(s,["channel_distribution","channelDistribution"]) || {};
+    const topCh = Object.entries(dist).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k} ${v}`).join(" · ");
+    if(suspects.length || supported!==null){
+      const audit = document.getElementById("molaAudit");
+      audit.style.display = "";
+      audit.innerHTML = `审计：判分器给出 CORRECT 的 ${acc!==null?Math.round(Number(acc)*Number(n||0)):"?"} 题中，${suspects.length} 题的引用里完全找不到标准答案（判分假阳性）`+
+        (supported!==null?`，只有 ${supported} 题有词面对应`:"")+
+        `。因此 ${pct(acc)} 是上界，确定性口径为 ${pct(match)}。${reqs!==null?`共 ${reqs} 次真实检索`+(topCh?`（${topCh}）`:"")+"。":""}`;
+    }
+    const judge = pick(s,["judge_model","judgeModel"]) || "DeepSeek";
+    const date = pick(s,["run_date_utc","runDate","date"]) || "";
+    const src = pick(s,["source_url","sourceUrl","source"]) || "google/frames-benchmark";
+    status.textContent = `判分模型 ${judge} · 运行 ${date} · 数据 ${src}`;
+    const rr = await fetch("benchmark/frames-runs.jsonl?t="+Date.now());
+    if(rr.ok){
+      const lines = (await rr.text()).split(/\r?\n/).filter(x=>x.trim());
+      const rows = lines.map(x=>{try{return JSON.parse(x)}catch(e){return null}}).filter(Boolean);
+      document.getElementById("molaRows").innerHTML = rows.map((x,i)=>{
+        const q = pick(x,["prompt","query","question"]) || "";
+        const gold = pick(x,["gold","answer","gold_answer"]) || "";
+        const jr = pick(x,["judge_raw","judged","judge","correct"]);
+        const ok = String(jr).toUpperCase().includes("CORRECT") && !String(jr).toUpperCase().includes("INCORRECT") || String(jr)==="1" || jr===true;
+        const credible = pick(x,["matched_credible","matchedCredible"]);
+        const credOk = credible===true || String(credible)==="1" || String(credible).toLowerCase()==="true";
+        const cit = pick(x,["citations","citation_count","citationsCount"]);
+        const citN = Array.isArray(cit) ? cit.length : cit;
+        const lat = pick(x,["latencyMs","latency_ms","totalLatencyMs"]);
+        return `<tr><td>${i+1}</td><td style="text-align:left;white-space:normal;max-width:420px">${esc(q)}</td>
+          <td style="text-align:left;white-space:normal;max-width:180px">${esc(gold)}</td>
+          <td><span class="${ok?"yes":"no"}">${ok?"CORRECT":"INCORRECT"}</span></td>
+          <td><span class="${credOk?"yes":"no"}">${credOk?"✓":"–"}</span></td>
+          <td>${citN===null||citN===undefined?"—":citN}</td><td>${lat?Math.round(lat)+" ms":"—"}</td></tr>`;
+      }).join("") || `<tr><td colspan="7" style="color:var(--muted)">结果文件为空。</td></tr>`;
+    }
+  }catch(e){
+    document.getElementById("molaN").textContent = "待生成";
+    status.textContent = "实测结果尚未生成（" + e.message + "）。本页不填占位分数。";
+  }
+}
+loadMola();
+</script>
+</body>
+</html>
