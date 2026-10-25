@@ -173,4 +173,4 @@ demo/             真实运行产物：截图、轨迹、试点数据
 
 ## 上游与许可
 
-MolaSearch 是 [magpie](https://github.com/yetone/magpie) 的发行版，上游为 MIT（© yetone）。本仓库目前未单独附带 LICENSE 文件；对上游的改动清单与 rebase 说明记录在 fork 源码的 `PATCHES.md`。
+MolaSearch 是 [magpie](https://github.com/yetone/magpie) 的发行版，上游为 MIT（© yetone），许可证随源码在 [`magpie/LICENSE`](magpie/LICENSE)。对上游的改动清单与 rebase 说明记录在 [`magpie/PATCHES.md`](magpie/PATCHES.md)。
