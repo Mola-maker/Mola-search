@@ -2,6 +2,7 @@
 data/
 agent-home/
 *.exe
+*.exe~
 *.log
 __pycache__/
 *.pyc

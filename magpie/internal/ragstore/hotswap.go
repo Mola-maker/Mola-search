@@ -53,7 +53,7 @@ type SwapReport struct {
 // Before phase 1 the current corpus is exported to a USMF backup beside the
 // data directory, so even a failed swap has a readable copy of what was
 // there.
-func (m *Manager) HotSwap(ctx context.Context, targetID string, embedder Embedder) (*SwapReport, error) {
+func (m *Manager) HotSwap(ctx context.Context, targetID string, embedder Embedder) (report *SwapReport, err error) {
 	// The page names the remote backends "milvus_hybrid" and
 	// "elasticsearch_hybrid"; the registry keys them by their engine ids.
 	// Accept either spelling so the button works whichever name a caller
@@ -77,8 +77,15 @@ func (m *Manager) HotSwap(ctx context.Context, targetID string, embedder Embedde
 		embedder = m.emb
 	}
 
-	report := &SwapReport{From: sourceID, To: targetID, EmbeddingModel: embedder.ID()}
+	report = &SwapReport{From: sourceID, To: targetID, EmbeddingModel: embedder.ID()}
 	started := time.Now()
+	defer func() {
+		count := 0
+		if report != nil {
+			count = report.Records
+		}
+		m.note(ctx, targetID, "write", "swap", count, err == nil, time.Since(started))
+	}()
 
 	// Backup first: the snapshot must describe the corpus as it was before
 	// anything was written to the target.
@@ -201,15 +208,26 @@ func shortHash(h string) string {
 // CanonicalMemoryRecord per line, which is the USMF interchange form — and
 // returns the number of records written. It streams, so a large corpus isn't
 // held twice in memory.
-func (m *Manager) ExportUSMF(ctx context.Context, w io.Writer) (int, error) {
-	recs, err := m.Active().All(ctx)
+func (m *Manager) ExportUSMF(ctx context.Context, w io.Writer) (n int, err error) {
+	active := m.Active()
+	backend := ""
+	if active != nil {
+		backend = active.ID()
+	}
+	started := time.Now()
+	defer func() {
+		m.note(ctx, backend, "read", "export", n, err == nil, time.Since(started))
+	}()
+	if active == nil {
+		return 0, fmt.Errorf("ragstore: no active backend")
+	}
+	recs, err := active.All(ctx)
 	if err != nil {
 		return 0, err
 	}
 	sort.Slice(recs, func(i, j int) bool { return recs[i].MemoryID < recs[j].MemoryID })
 	bw := bufio.NewWriter(w)
 	enc := json.NewEncoder(bw)
-	n := 0
 	for _, r := range recs {
 		if err := enc.Encode(r); err != nil {
 			return n, err
@@ -226,12 +244,20 @@ func (m *Manager) ExportUSMF(ctx context.Context, w io.Writer) (int, error) {
 // active backend, returning how many were imported. A malformed line is
 // skipped and counted, not fatal: an export from an older build with one
 // broken line should still restore the rest of the corpus.
-func (m *Manager) ImportUSMF(ctx context.Context, r io.Reader) (int, error) {
+func (m *Manager) ImportUSMF(ctx context.Context, r io.Reader) (imported int, err error) {
+	active := m.Active()
+	backend := ""
+	if active != nil {
+		backend = active.ID()
+	}
+	started := time.Now()
+	defer func() {
+		m.note(ctx, backend, "write", "import", imported, err == nil, time.Since(started))
+	}()
 	sc := bufio.NewScanner(r)
 	// A record with a long evidence text exceeds bufio's 64KB default line.
 	sc.Buffer(make([]byte, 0, 64*1024), 8*1024*1024)
 	var batch []usmf.CanonicalMemoryRecord
-	imported := 0
 	flush := func() error {
 		if len(batch) == 0 {
 			return nil

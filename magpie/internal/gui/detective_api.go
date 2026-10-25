@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/library"
+	"github.com/yetone/magpie/internal/ragstore"
 	"github.com/yetone/magpie/internal/searchdet"
 )
 
@@ -78,6 +79,10 @@ func detectiveRoutes(mux *http.ServeMux) {
 		})
 		persistInvestigation(ctx, inv)
 		recordRouteFlows(inv)
+		// The composed report is kept beside the run's trace id, so reopening
+		// it does not re-render anything. A zero-retention or blocked run is
+		// refused by SaveReport and still shown now.
+		_ = searchdet.SaveReport(inv.Report)
 		writeJSON(rw, inv)
 	})
 
@@ -118,6 +123,55 @@ func detectiveRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/detective/channels", func(rw http.ResponseWriter, r *http.Request) {
 		e := detectiveEngine()
 		writeJSON(rw, map[string]any{"channels": e.ChannelStatuses()})
+	})
+
+	// Saved composed reports: the list the page reopens, one report by id,
+	// and the Markdown/HTML export built from the model itself.
+	mux.HandleFunc("GET /api/detective/reports", func(rw http.ResponseWriter, r *http.Request) {
+		reports, err := searchdet.ListReports()
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		if reports == nil {
+			reports = []searchdet.ReportSummary{}
+		}
+		writeJSON(rw, map[string]any{"reports": reports})
+	})
+
+	mux.HandleFunc("GET /api/detective/reports/{id}", func(rw http.ResponseWriter, r *http.Request) {
+		report, ok, err := searchdet.LoadReport(r.PathValue("id"))
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		if !ok {
+			http.NotFound(rw, r)
+			return
+		}
+		writeJSON(rw, report)
+	})
+
+	mux.HandleFunc("GET /api/detective/reports/{id}/export", func(rw http.ResponseWriter, r *http.Request) {
+		report, ok, err := searchdet.LoadReport(r.PathValue("id"))
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		if !ok {
+			http.NotFound(rw, r)
+			return
+		}
+		switch strings.ToLower(r.URL.Query().Get("format")) {
+		case "html", "htm":
+			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+			rw.Header().Set("Content-Disposition", `attachment; filename="`+report.ReportID+`.html"`)
+			_, _ = io.WriteString(rw, searchdet.ReportExportHTML(report))
+		default:
+			rw.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			rw.Header().Set("Content-Disposition", `attachment; filename="`+report.ReportID+`.md"`)
+			_, _ = io.WriteString(rw, searchdet.ReportExportMarkdown(report))
+		}
 	})
 
 	mux.HandleFunc("POST /api/detective/channels", func(rw http.ResponseWriter, r *http.Request) {
@@ -348,6 +402,10 @@ func persistInvestigation(ctx context.Context, inv searchdet.Investigation) {
 	if err != nil {
 		return
 	}
+	// The run names who asked for it (the Detective page, or an MCP client's
+	// own name), so the memory write in the live feed is attributed to that
+	// caller rather than to the page that happened to persist it.
+	ctx = ragstore.WithActor(ctx, inv.OriginAgent)
 	top := inv.Citations[0]
 	var evidence []string
 	for i, c := range inv.Citations {

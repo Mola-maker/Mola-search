@@ -9,14 +9,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/yetone/magpie/internal/agent"
 	"github.com/yetone/magpie/internal/library"
 	"github.com/yetone/magpie/internal/ragstore"
 	"github.com/yetone/magpie/internal/searchdet"
@@ -55,16 +58,17 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			fail(rw, err)
 			return
 		}
-		backends, err := m.Status(r.Context())
+		ctx := ragOperationContext(r)
+		backends, err := m.Status(ctx)
 		if err != nil {
 			fail(rw, err)
 			return
 		}
-		records, _ := m.Active().All(r.Context())
+		records, _ := m.Records(ctx)
 		if records == nil {
 			records = []searchdet.CanonicalMemoryRecord{}
 		}
-		habits, _ := m.Habits(r.Context())
+		habits, _ := m.Habits(ctx)
 		if habits == nil {
 			habits = []ragstore.Habit{}
 		}
@@ -100,7 +104,7 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			fail(rw, err)
 			return
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), 120*time.Second)
+		ctx, cancel := context.WithTimeout(ragOperationContext(r), 120*time.Second)
 		defer cancel()
 		report, err := m.HotSwap(ctx, in.TargetDbID, emb)
 		if err != nil {
@@ -121,8 +125,8 @@ func ragStoreRoutes(mux *http.ServeMux) {
 				return
 			}
 		}
-		backends, _ := m.Status(r.Context())
-		records, _ := m.Active().All(r.Context())
+		backends, _ := m.Status(ctx)
+		records, _ := m.Records(ctx)
 		writeJSON(rw, map[string]any{
 			"activeDbId": m.Active().ID(), "backends": backends, "records": records, "swap": report,
 			"embeddingModel": m.EmbeddingModel(), "rerankerModel": m.RerankerModel(),
@@ -142,7 +146,7 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			fail(rw, err)
 			return
 		}
-		n, err := m.ExportUSMF(r.Context(), f)
+		n, err := m.ExportUSMF(ragOperationContext(r), f)
 		cerr := f.Close()
 		if err != nil {
 			fail(rw, err)
@@ -184,12 +188,12 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			fail(rw, fmt.Errorf("send jsonl or path"))
 			return
 		}
-		n, err := m.ImportUSMF(r.Context(), rd)
+		n, err := m.ImportUSMF(ragOperationContext(r), rd)
 		if err != nil {
 			fail(rw, err)
 			return
 		}
-		records, _ := m.Active().All(r.Context())
+		records, _ := m.Records(ragOperationContext(r))
 		writeJSON(rw, map[string]any{"imported": n, "records": records})
 	})
 
@@ -217,7 +221,7 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			fail(rw, err)
 			return
 		}
-		if err := m.Insert(r.Context(), []searchdet.CanonicalMemoryRecord{rec}); err != nil {
+		if err := m.Insert(ragOperationContext(r), []searchdet.CanonicalMemoryRecord{rec}); err != nil {
 			fail(rw, err)
 			return
 		}
@@ -242,7 +246,7 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			return
 		}
 		started := time.Now()
-		hits, err := m.Search(r.Context(), in.Query, in.TopK)
+		hits, err := m.Search(ragOperationContext(r), in.Query, in.TopK)
 		if err != nil {
 			fail(rw, err)
 			return
@@ -259,7 +263,7 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			fail(rw, err)
 			return
 		}
-		habits, err := m.Habits(r.Context())
+		habits, err := m.Habits(ragOperationContext(r))
 		if err != nil {
 			fail(rw, err)
 			return
@@ -276,13 +280,184 @@ func ragStoreRoutes(mux *http.ServeMux) {
 			fail(rw, err)
 			return
 		}
-		files, err := syncHabitsToAgents(r.Context(), m)
+		files, err := syncHabitsToAgents(ragOperationContext(r), m)
 		if err != nil {
 			fail(rw, err)
 			return
 		}
 		writeJSON(rw, map[string]any{"updatedFiles": files})
 	})
+
+	// The six database panels read one payload: the active corpus, every
+	// backend's real status, and each store's own view (relation edges,
+	// stored vectors, vault files, SQLite's schema counts, the lexical
+	// index). Nothing here is estimated.
+	mux.HandleFunc("GET /api/rag/panels", func(rw http.ResponseWriter, r *http.Request) {
+		m, err := ragManagerOf()
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		data, err := m.Panels(ragOperationContext(r))
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		writeJSON(rw, data)
+	})
+
+	// The live feed's non-streaming shape: recent real operations, and the
+	// agent registry the page draws each caller with.
+	mux.HandleFunc("GET /api/rag/operations", func(rw http.ResponseWriter, r *http.Request) {
+		m, err := ragManagerOf()
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		since, _ := strconv.ParseInt(r.URL.Query().Get("since"), 10, 64)
+		operations := m.RecentOperations(40)
+		if since > 0 {
+			operations = m.OperationsSince(since)
+		}
+		latest := since
+		for _, op := range operations {
+			if op.ID > latest {
+				latest = op.ID
+			}
+		}
+		writeJSON(rw, map[string]any{
+			"operations": operations,
+			"agents":     ragAgents(),
+			"latest":     latest,
+		})
+	})
+
+	// The live feed itself: Server-Sent Events, one frame per real operation.
+	// The hello frame carries the recent history and the agent registry, so a
+	// page that connects late still shows only what really happened.
+	mux.HandleFunc("GET /api/rag/events", func(rw http.ResponseWriter, r *http.Request) {
+		m, err := ragManagerOf()
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		// ResponseController reaches the flusher through whatever wrapper
+		// (the web server's gzip pass) sits over the writer.
+		control := http.NewResponseController(rw)
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.Header().Set("Cache-Control", "no-cache")
+		rw.Header().Set("Connection", "keep-alive")
+		rw.Header().Set("X-Accel-Buffering", "no")
+		rw.WriteHeader(http.StatusOK)
+		if err := writeSSE(rw, "hello", map[string]any{
+			"operations": m.RecentOperations(40),
+			"agents":     ragAgents(),
+		}); err != nil {
+			return
+		}
+		if err := control.Flush(); err != nil {
+			return
+		}
+
+		ops, unsubscribe := m.SubscribeOperations()
+		defer unsubscribe()
+		heartbeat := time.NewTicker(20 * time.Second)
+		defer heartbeat.Stop()
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-heartbeat.C:
+				if _, err := io.WriteString(rw, ": keep-alive\n\n"); err != nil {
+					return
+				}
+				if control.Flush() != nil {
+					return
+				}
+			case op, open := <-ops:
+				if !open {
+					return
+				}
+				if err := writeSSE(rw, "op", op); err != nil {
+					return
+				}
+				if control.Flush() != nil {
+					return
+				}
+			}
+		}
+	})
+}
+
+// ragOperationContext names the caller of an /api/rag call so the live feed
+// can draw its agent icon. A caller that names itself (an MCP client, a
+// script) is believed; the page calls without the header, and the operation
+// is attributed to magpie, which is who really made it.
+func ragOperationContext(r *http.Request) context.Context {
+	actor := strings.TrimSpace(r.Header.Get("X-Magpie-Actor"))
+	return ragstore.WithActor(r.Context(), actor)
+}
+
+// ragAgent is one client of the memory bus as the feed draws it: a real
+// registry row, its bundled icon and the URL that serves it.
+type ragAgent struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Icon    string   `json:"icon"`
+	IconURL string   `json:"iconUrl"`
+	Aliases []string `json:"aliases,omitempty"`
+}
+
+// ragAgents is the agent registry, reduced to what the feed needs. The
+// registry is detected from disk, so it is held for a short while: a page
+// that polls or reconnects does not re-detect every agent each time.
+func ragAgents() []ragAgent {
+	ragAgentsMu.Lock()
+	defer ragAgentsMu.Unlock()
+	if ragAgentsCache != nil && time.Since(ragAgentsAt) < 30*time.Second {
+		return ragAgentsCache
+	}
+	clients := agent.Clients()
+	out := make([]ragAgent, 0, len(clients))
+	for _, a := range clients {
+		out = append(out, ragAgent{
+			ID: a.ID, Name: a.Name, Icon: a.Icon, IconURL: ragIconURL(a.Icon),
+			Aliases: append([]string(nil), a.Aliases...),
+		})
+	}
+	ragAgentsCache = out
+	ragAgentsAt = time.Now()
+	return out
+}
+
+var (
+	ragAgentsMu    sync.Mutex
+	ragAgentsCache []ragAgent
+	ragAgentsAt    time.Time
+)
+
+// ragIconURL resolves a bundled icon name to the file that really exists.
+func ragIconURL(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = "magpie"
+	}
+	for _, ext := range []string{"svg", "png"} {
+		if _, err := fs.Stat(assets, "assets/icons/"+name+"."+ext); err == nil {
+			return "icons/" + name + "." + ext
+		}
+	}
+	return "icons/magpie.svg"
+}
+
+// writeSSE writes one named event frame.
+func writeSSE(w io.Writer, event string, v any) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, data)
+	return err
 }
 
 // embedderFor picks the model a hot swap computes vectors with. The local
@@ -311,7 +486,7 @@ func embedderFor(model string) (ragstore.Embedder, error) {
 // into each installed agent's instructions file, inside a managed block so
 // a second sync replaces it and nothing of the user's is lost.
 func syncHabitsToAgents(ctx context.Context, m *ragstore.Manager) ([]string, error) {
-	records, err := m.Active().All(ctx)
+	records, err := m.Records(ctx)
 	if err != nil {
 		return nil, err
 	}

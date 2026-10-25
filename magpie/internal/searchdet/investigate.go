@@ -271,8 +271,17 @@ func keyedChannel(id string) bool {
 	return false
 }
 
-// Investigate runs one query through the mode's plan.
+// Investigate runs one query through the mode's plan and composes the
+// pre-rendered report from the finished run. The composition runs after the
+// output gate, so the report only ever copies values the gate passed.
 func (e *Engine) Investigate(ctx context.Context, opt Options) Investigation {
+	inv := e.investigate(ctx, opt)
+	inv.Report = BuildReport(inv)
+	return inv
+}
+
+// investigate is the run itself; Investigate composes the report around it.
+func (e *Engine) investigate(ctx context.Context, opt Options) Investigation {
 	started := e.nowFn()
 	startedWall := time.Now()
 	keys := e.keysFn()

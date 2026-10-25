@@ -44,6 +44,11 @@ type Manager struct {
 	choiceMu   sync.RWMutex
 	reranker   Reranker
 	memoryMode string
+
+	// events is the live operation feed: one record per real read, write,
+	// swap or probe this manager performs. Nil only on a hand-built Manager
+	// in a test, where note() is a no-op.
+	events *eventRing
 }
 
 // NewManager opens the primary SQLite store and the vault, registers the four
@@ -71,6 +76,7 @@ func NewManager(k searchdet.Keys) (*Manager, error) {
 		keys:       k,
 		emb:        emb,
 		memoryMode: MemoryModePersistent,
+		events:     newEventRing(),
 	}
 	if k.RerankAPIBase != "" {
 		m.reranker = &RemoteReranker{
@@ -148,10 +154,18 @@ func (m *Manager) Insert(ctx context.Context, recs []usmf.CanonicalMemoryRecord)
 	if m.MemoryMode() == MemoryModeEphemeral {
 		return nil
 	}
-	if err := m.Active().Upsert(ctx, recs); err != nil {
+	active := m.Active()
+	if active == nil {
+		return fmt.Errorf("ragstore: no active backend")
+	}
+	backend := active.ID()
+	started := time.Now()
+	if err := active.Upsert(ctx, recs); err != nil {
+		m.note(ctx, backend, "write", "memory", 0, false, time.Since(started))
 		return err
 	}
 	m.learnDomains(ctx, recs)
+	m.note(ctx, backend, "write", "memory", len(recs), true, time.Since(started))
 	return nil
 }
 
@@ -159,14 +173,23 @@ func (m *Manager) Insert(ctx context.Context, recs []usmf.CanonicalMemoryRecord)
 // configured reranker when there is one. A reranker that fails leaves the
 // RRF order untouched: a search never fails because of it.
 func (m *Manager) Search(ctx context.Context, query string, k int) ([]Hit, error) {
+	active := m.Active()
+	if active == nil {
+		return nil, fmt.Errorf("ragstore: no active backend")
+	}
+	backend := active.ID()
+	started := time.Now()
 	qvec, err := m.emb.Embed(ctx, query)
 	if err != nil {
+		m.note(ctx, backend, "read", "search", 0, false, time.Since(started))
 		return nil, err
 	}
-	hits, err := m.Active().Search(ctx, query, qvec, k)
+	hits, err := active.Search(ctx, query, qvec, k)
 	if err != nil {
+		m.note(ctx, backend, "read", "search", 0, false, time.Since(started))
 		return nil, err
 	}
+	m.note(ctx, backend, "read", "search", len(hits), true, time.Since(started))
 	return m.rerank(ctx, query, hits), nil
 }
 
@@ -273,6 +296,7 @@ func (m *Manager) Status(ctx context.Context) ([]searchdet.DBBackendInfo, error)
 	// took four timeouts in a row would be unusable. Local backends answer
 	// from the same goroutines without a network wait.
 	reachable := make([]bool, len(infos))
+	probeTook := make([]time.Duration, len(infos))
 	var wg sync.WaitGroup
 	for i := range infos {
 		s, ok := backends[infos[i].ID]
@@ -282,7 +306,9 @@ func (m *Manager) Status(ctx context.Context) ([]searchdet.DBBackendInfo, error)
 		wg.Add(1)
 		go func(i int, s Store) {
 			defer wg.Done()
+			started := time.Now()
 			reachable[i] = s.Ping(ctx) == nil
+			probeTook[i] = time.Since(started)
 		}(i, s)
 	}
 	wg.Wait()
@@ -292,6 +318,7 @@ func (m *Manager) Status(ctx context.Context) ([]searchdet.DBBackendInfo, error)
 		if _, ok := backends[info.ID]; !ok {
 			continue
 		}
+		info.Reachable = reachable[i]
 		if reachable[i] {
 			info.AvgLatency = latency
 		} else {
@@ -303,6 +330,7 @@ func (m *Manager) Status(ctx context.Context) ([]searchdet.DBBackendInfo, error)
 		if info.ID == activeID {
 			info.Capabilities = "【当前主库】 " + info.Capabilities
 		}
+		m.note(ctx, info.ID, "probe", "reachability", 0, reachable[i], probeTook[i])
 	}
 	return infos, nil
 }
@@ -508,8 +536,10 @@ func (m *Manager) learnDomains(ctx context.Context, recs []usmf.CanonicalMemoryR
 
 // Habits returns every learned habit, newest first.
 func (m *Manager) Habits(ctx context.Context) ([]Habit, error) {
+	started := time.Now()
 	habits, err := m.primary.loadHabits(ctx)
 	if err != nil {
+		m.note(ctx, SQLiteHybridID, "read", "habits", 0, false, time.Since(started))
 		return nil, err
 	}
 	sort.SliceStable(habits, func(i, j int) bool {
@@ -518,6 +548,7 @@ func (m *Manager) Habits(ctx context.Context) ([]Habit, error) {
 		}
 		return habits[i].Pattern < habits[j].Pattern
 	})
+	m.note(ctx, SQLiteHybridID, "read", "habits", len(habits), true, time.Since(started))
 	return habits, nil
 }
 

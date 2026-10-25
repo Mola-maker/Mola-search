@@ -45,6 +45,7 @@
 
   const TABS = [
     { id: "lab", key: "Investigation desk" },
+    { id: "report", key: "Investigation report" },
     { id: "trajectory", key: "Live trajectory and network" },
     { id: "modes", key: "Thirty search modes" },
     { id: "proof", key: "Channels and gates" },
@@ -78,6 +79,12 @@
     stakeouts: [],
     currentResult: null,
     freshResult: false,
+    // savedReport is a composed report read back from disk; it takes
+    // precedence over the current run's report until the next investigation.
+    savedReport: null,
+    reports: [],
+    reportsLoaded: false,
+    reportError: "",
     newUrls: new Set(),
     netView: "flow",
     channels: [],
@@ -235,8 +242,12 @@
     if (invRes && !invRes.error) {
       detState.currentResult = invRes;
       detState.freshResult = true;
+      detState.savedReport = null;
       detState.newUrls = new Set((invRes.citations || []).map((c) => c.url).filter(Boolean));
       detState.foldHidden = false;
+      // A completed investigation opens as its composed report, not as the
+      // wire shape the engine answered with.
+      if (invRes.report && invRes.report.reportId) detState.subtab = "report";
     } else {
       detState.error = T("Investigation failed: {error}", { error: (invRes && invRes.error) || T("No response from the engine") });
     }
@@ -538,6 +549,7 @@
     const r = detState.currentResult || {};
     const badge = {
       lab: r.verdict || "—",
+      report: reportOf() ? "✓" : "—",
       trajectory: String((r.trajectory || []).length || "—"),
       modes: String((detState.modes || []).length || "—"),
       proof: `${online}/${total || "?"}`,
@@ -1050,6 +1062,315 @@
         }
       };
     });
+  }
+
+  // ---------- report view -----------------------------------------------
+
+  // The report is composed by the engine after the run; this view only
+  // arranges it. reportOf prefers a report read back from disk, so opening a
+  // saved investigation shows the same composed page without a new run.
+  function reportOf() {
+    if (detState.savedReport && detState.savedReport.reportId) return detState.savedReport;
+    const r = detState.currentResult;
+    return r && r.report && r.report.reportId ? r.report : null;
+  }
+
+  function reportSection(rep, id) {
+    const found = (rep.sections || []).find((s) => s.id === id);
+    if (found) return found;
+    const counts = {
+      summary: rep.verdict ? 1 : 0,
+      graph: ((rep.graph || {}).nodes || []).length,
+      evidence: (rep.evidence || []).length,
+      claims: (rep.claims || []).length,
+      timeline: (rep.timeline || []).length
+    };
+    const n = counts[id] || 0;
+    return { id, count: n, empty: !n };
+  }
+
+  async function loadSavedReports() {
+    detState.reportsLoaded = true;
+    const res = await detApi("detective/reports");
+    if (res && !res.error) {
+      detState.reports = Array.isArray(res.reports) ? res.reports : [];
+      detState.reportError = "";
+    } else {
+      detState.reportError = T("Could not load the saved reports: {error}", { error: (res && res.error) || "" });
+    }
+    if (detState.subtab === "report") renderDetectiveAll();
+  }
+
+  async function openSavedReport(id) {
+    const res = await detApi("detective/reports/" + encodeURIComponent(id));
+    if (res && !res.error && res.reportId) {
+      detState.savedReport = res;
+      detState.reportError = "";
+    } else {
+      detState.reportError = T("Could not open this report: {error}", { error: (res && res.error) || "" });
+    }
+    renderDetectiveAll();
+  }
+
+  function reportHeader(rep) {
+    const v = VERDICTS[rep.verdict] || { key: rep.verdict || "UNVERIFIED", tone: "muted" };
+    const download =
+      rep.noPersist
+        ? `<span class="det-sec-note">${T("This run is not persisted, so no download is kept.")}</span>`
+        : `<a class="det-btn" href="/api/detective/reports/${encodeURIComponent(rep.reportId)}/export?format=md" download>${T("Download Markdown")}</a>
+           <a class="det-btn" href="/api/detective/reports/${encodeURIComponent(rep.reportId)}/export?format=html" download>${T("Download HTML")}</a>`;
+    const current =
+      detState.savedReport && detState.currentResult && detState.currentResult.report
+        ? `<button type="button" class="det-ghost" id="detReportCurrentBtn">${T("Show the current report")}</button>`
+        : "";
+    return `
+      <section class="det-card det-report-head det-enter">
+        <header class="det-sec-head">
+          <div class="det-report-title">
+            <h2 class="det-h2">${esc(rep.query || T("Investigation report"))}</h2>
+            <p class="det-sec-note">${T("The composed report of this run: connections, evidence, claims and dates.")}</p>
+          </div>
+          <div class="det-report-actions">${current}${download}</div>
+        </header>
+        <div class="det-metrics">
+          ${metric(T(v.key), rep.verdict || "—", v.tone)}
+          ${metric(T("Trust score"), String(rep.trustScore ?? 0))}
+          ${metric(T("Evidence items"), String((rep.evidence || []).length), "blue")}
+          ${metric(T("Answered by"), rep.primaryEngine || "—")}
+          ${metric(T("Total latency"), rep.totalLatencyMs ? rep.totalLatencyMs + " ms" : "—")}
+          ${metric(T("Report built at"), rep.generatedAt || "—")}
+          ${metric(T("Report identifier"), rep.reportId || "—")}
+        </div>
+        <p class="det-hint">${T("Every node and link below came from this run.")}</p>
+      </section>`;
+  }
+
+  // reportGraphSVG draws the composed graph: claims in the left column,
+  // sources in the right, and only the edges the model carries.
+  function reportGraphSVG(g) {
+    const claims = (g.nodes || []).filter((n) => n.kind === "claim");
+    const sources = (g.nodes || []).filter((n) => n.kind === "source");
+    const rowH = 76;
+    const top = 40;
+    const w = 760;
+    const h = Math.max(1, claims.length, sources.length) * rowH + top + 24;
+    const pos = {};
+    claims.forEach((n, i) => (pos[n.id] = { x: 150, y: top + i * rowH }));
+    sources.forEach((n, i) => (pos[n.id] = { x: 610, y: top + i * rowH }));
+    const clip = (s, n) => {
+      const text = String(s || "");
+      return text.length > n ? text.slice(0, n) + "…" : text;
+    };
+    const edges = (g.edges || [])
+      .map((e) => {
+        const a = pos[e.from];
+        const b = pos[e.to];
+        if (!a || !b) return "";
+        if (e.kind === "cooccurrence") {
+          return `<path class="det-rg-edge cooccur" d="M${a.x} ${a.y} C ${a.x + 80} ${a.y}, ${b.x + 80} ${b.y}, ${b.x} ${b.y}"><title>${esc(e.label || "")}</title></path>`;
+        }
+        return `<line class="det-rg-edge cites" x1="${a.x + 9}" y1="${a.y}" x2="${b.x - 9}" y2="${b.y}"><title>${esc(e.label || "")}</title></line>`;
+      })
+      .join("");
+    const node = (n) => {
+      const p = pos[n.id];
+      const source = n.kind === "source";
+      const anchor = source ? "start" : "end";
+      const tx = source ? p.x + 18 : p.x - 18;
+      const label = `<text class="det-rg-label" x="${tx}" y="${p.y + 4}" text-anchor="${anchor}">${esc(clip(n.label, 30))}</text>`;
+      const badge = n.badge
+        ? `<text class="det-rg-badge" x="${tx}" y="${p.y + 20}" text-anchor="${anchor}">${esc(n.badge)}</text>`
+        : "";
+      const body = `<title>${esc(n.label)}${n.sub ? " — " + esc(n.sub) : ""}</title>
+        <circle class="det-rg-ring" cx="${p.x}" cy="${p.y}" r="10" />
+        <circle class="det-rg-dot" cx="${p.x}" cy="${p.y}" r="6" />${label}${badge}`;
+      if (source && n.url) {
+        return `<a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer" class="det-rg-node source">${body}</a>`;
+      }
+      return `<g class="det-rg-node ${source ? "source" : "claim"}">${body}</g>`;
+    };
+    return `
+      <div class="det-rg-scroll">
+        <svg class="det-rg" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(T("Connection map of this run"))}">
+          <text class="det-rg-col" x="150" y="20" text-anchor="middle">${T("Claim side")}</text>
+          <text class="det-rg-col" x="610" y="20" text-anchor="middle">${T("Source side")}</text>
+          <g class="det-rg-edges">${edges}</g>
+          <g class="det-rg-nodes">${claims.map(node).join("")}${sources.map(node).join("")}</g>
+        </svg>
+      </div>
+      <div class="det-legend">
+        <span class="det-legend-item"><i class="det-rg-line cites"></i>${T("Cites this source")}</span>
+        <span class="det-legend-item"><i class="det-rg-line cooccur"></i>${T("Shared terms link")}</span>
+      </div>`;
+  }
+
+  function reportGraphSection(rep) {
+    const g = rep.graph || { nodes: [], edges: [] };
+    const section = reportSection(rep, "graph");
+    let body;
+    if (section.empty) {
+      body = `<p class="det-empty">${T("No source or claim node was recorded for this run.")}</p>`;
+    } else {
+      body = reportGraphSVG(g);
+      if (!(g.edges || []).length) body += `<p class="det-hint">${T("No measured link connects these nodes; the sources stand alone.")}</p>`;
+      if (g.omitted) body += `<p class="det-hint">${g.omitted} ${T("Other sources are in the evidence map")}</p>`;
+    }
+    return `
+      <section class="det-card det-enter">
+        <header class="det-sec-head"><h3>${T("Connection map of this run")}</h3><span class="det-tab-badge">${(g.nodes || []).length}</span></header>
+        ${body}
+      </section>`;
+  }
+
+  function reportEvidenceRow(e) {
+    const title = e.url
+      ? `<a class="det-src-title" href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.title)}</a>`
+      : `<span class="det-src-title">${esc(e.title)}</span>`;
+    return `
+      <article class="det-src">
+        <div class="det-src-body">
+          <div class="det-src-head">${title}</div>
+          ${e.snippet ? `<p class="det-src-snippet">${esc(e.snippet)}</p>` : ""}
+          <div class="det-src-meta">
+            ${dot(e.authorityLevel >= 4 ? "blue" : e.authorityLevel >= 3 ? "ink" : "pink")}
+            <span>${esc(e.sourceName || e.domain || "")}</span>
+            <span>${T("Source tier")} L${e.authorityLevel ?? 0}</span>
+            ${e.publishedAt ? `<span>${esc(e.publishedAt)}</span>` : ""}
+          </div>
+        </div>
+        ${e.url ? `<a class="det-open" href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">${T("Open the source")}</a>` : ""}
+      </article>`;
+  }
+
+  function reportEvidenceSection(rep) {
+    const ev = rep.evidence || [];
+    const section = reportSection(rep, "evidence");
+    let body;
+    if (section.empty) {
+      body = `<p class="det-empty">${T("This run returned no sources.")}</p>`;
+    } else {
+      body = (rep.evidenceGroups || [])
+        .map((group) => {
+          const rows = (group.evidenceIds || [])
+            .map((id) => ev.find((e) => e.id === id))
+            .filter(Boolean)
+            .map(reportEvidenceRow)
+            .join("");
+          if (!rows) return "";
+          return `<div class="det-rg-group">
+            <h4>${esc(group.key || T("Channel not recorded in this run"))}<span class="det-tab-badge">${group.count ?? 0}</span></h4>
+            <div class="det-sources">${rows}</div>
+          </div>`;
+        })
+        .join("");
+      if (!body) body = `<div class="det-sources">${ev.map(reportEvidenceRow).join("")}</div>`;
+    }
+    return `
+      <section class="det-card det-enter">
+        <header class="det-sec-head"><h3>${T("Evidence map by channel")}</h3><span class="det-tab-badge">${ev.length}</span></header>
+        ${body}
+      </section>`;
+  }
+
+  function reportClaimsSection(rep) {
+    const rows = rep.claims || [];
+    const section = reportSection(rep, "claims");
+    return `
+      <section class="det-card det-enter">
+        <header class="det-sec-head"><h3>${T("Claim cards of this run")}</h3><span class="det-tab-badge">${rows.length}</span></header>
+        ${
+          section.empty
+            ? `<p class="det-empty">${T("No claim row for this run.")}</p>`
+            : `<div class="det-claims">${rows
+                .map(
+                  (c) => `<div class="det-claim">
+                    ${dot(c.status === "VERIFIED" ? "blue" : c.status === "REFUTED" ? "ink" : "pink")}
+                    <div class="det-claim-body">
+                      <div class="det-claim-text">${esc(c.claim)}</div>
+                      <div class="det-claim-fact">${esc(c.fact)}</div>
+                    </div>
+                    <span class="det-tab-badge">${esc(c.status || "—")}</span>
+                    ${c.sourceUrl ? `<a class="det-ghost" href="${esc(c.sourceUrl)}" target="_blank" rel="noopener noreferrer">${T("Open the source")}</a>` : ""}
+                  </div>`
+                )
+                .join("")}</div>`
+        }
+      </section>`;
+  }
+
+  function reportTimelineSection(rep) {
+    const events = rep.timeline || [];
+    const section = reportSection(rep, "timeline");
+    return `
+      <section class="det-card det-enter">
+        <header class="det-sec-head"><h3>${T("Dated timeline of this run")}</h3><span class="det-tab-badge">${events.length}</span></header>
+        ${
+          section.empty
+            ? `<p class="det-empty">${T("No dated source was found in this run; no date is invented.")}</p>`
+            : `<ol class="det-tree det-rg-timeline">${events
+                .map(
+                  (e) => `<li class="det-tree-node">
+                    <span class="det-tree-dot"></span>
+                    <div class="det-tree-head"><time>${esc(e.date)}</time>${e.stage ? `<span class="det-tab-badge">${esc(e.stage)}</span>` : ""}</div>
+                    ${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer"><b>${esc(e.title)}</b></a>` : `<b>${esc(e.title)}</b>`}
+                    ${e.detail ? `<p>${esc(e.detail)}</p>` : ""}
+                  </li>`
+                )
+                .join("")}</ol>`
+        }
+      </section>`;
+  }
+
+  function reportHistorySection() {
+    const list = detState.reports || [];
+    let body;
+    if (!detState.reportsLoaded) body = `<p class="det-empty">${T("Loading saved reports…")}</p>`;
+    else if (!list.length) body = `<p class="det-empty">${T("No saved report yet.")}</p>`;
+    else
+      body = `<div class="det-rg-history">${list
+        .map(
+          (item) => `<button type="button" class="det-rg-saved" data-report-id="${esc(item.reportId)}">
+            <span class="det-rg-saved-query">${esc(item.query || item.reportId)}</span>
+            <span class="det-rg-saved-meta">${esc(item.verdict || "—")} · ${esc(item.generatedAt || "")} · ${item.citations ?? 0} ${T("Evidence items")}</span>
+          </button>`
+        )
+        .join("")}</div>`;
+    return `
+      <section class="det-card det-enter">
+        <header class="det-sec-head"><h3>${T("Saved reports")}</h3><span class="det-tab-badge">${list.length}</span></header>
+        ${detState.reportError ? `<p class="det-hint">${esc(detState.reportError)}</p>` : ""}
+        <p class="det-sec-note">${T("Open a saved report")}</p>
+        ${body}
+      </section>`;
+  }
+
+  function reportHTML() {
+    const rep = reportOf();
+    return `
+      ${errorBanner()}
+      ${
+        rep
+          ? `${reportHeader(rep)}${reportGraphSection(rep)}${reportEvidenceSection(rep)}${reportClaimsSection(rep)}${reportTimelineSection(rep)}`
+          : `<section class="det-card det-empty-card det-enter">
+              <span class="det-empty-mark" aria-hidden="true"></span>
+              <h2>${T("No report yet. Run an investigation first.")}</h2>
+            </section>`
+      }
+      ${reportHistorySection()}`;
+  }
+
+  function bindReport(box) {
+    if (!detState.reportsLoaded) loadSavedReports();
+    box.querySelectorAll("button[data-report-id]").forEach((btn) => {
+      btn.onclick = () => openSavedReport(btn.dataset.reportId);
+    });
+    const current = document.getElementById("detReportCurrentBtn");
+    if (current) {
+      current.onclick = () => {
+        detState.savedReport = null;
+        renderDetectiveAll();
+      };
+    }
   }
 
   // ---------- trajectory view -------------------------------------------
@@ -2073,6 +2394,9 @@ latency_budget: "${esc(mode.latencyBudget)}"
         detState.freshResult = false;
         detState.newUrls = new Set();
       }
+    } else if (detState.subtab === "report") {
+      content.innerHTML = reportHTML();
+      bindReport(content);
     } else if (detState.subtab === "trajectory") {
       content.innerHTML = trajectoryHTML();
       bindTrajectory(content);

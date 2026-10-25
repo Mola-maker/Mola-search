@@ -127,14 +127,18 @@ type StakeoutJob struct {
 
 // DBBackendInfo is one RAG backend the ragstore serves.
 type DBBackendInfo struct {
-	ID           string `json:"id"`
-	Icon         string `json:"icon"`
-	Name         string `json:"name"`
-	EngineType   string `json:"engineType"`
-	Description  string `json:"description"`
-	DSN          string `json:"dsn"`
-	RecordCount  int    `json:"recordCount"`
-	AvgLatency   string `json:"avgLatency"`
+	ID          string `json:"id"`
+	Icon        string `json:"icon"`
+	Name        string `json:"name"`
+	EngineType  string `json:"engineType"`
+	Description string `json:"description"`
+	DSN         string `json:"dsn"`
+	RecordCount int    `json:"recordCount"`
+	AvgLatency  string `json:"avgLatency"`
+	// Reachable is the result of this status call's real probe. AvgLatency
+	// stays the human string it has always been; a page that needs a
+	// boolean (a backend that is down reads "unavailable") reads this.
+	Reachable    bool   `json:"reachable"`
 	Capabilities string `json:"capabilities"`
 }
 
@@ -192,8 +196,12 @@ type Investigation struct {
 	Answer Answer `json:"answer"`
 	// NoPersist says this run must not be written to the memory store: the
 	// zero-retention mode (M24) promises nothing is kept.
-	NoPersist   bool   `json:"noPersist"`
-	GeneratedAt string `json:"generatedAt"`
+	NoPersist bool `json:"noPersist"`
+	// Report is the pre-rendered report composed after the run: the
+	// connection graph, evidence map, claim cards and timeline the page and
+	// the export render. It carries no value the output gate did not pass.
+	Report      ReportModel `json:"report"`
+	GeneratedAt string      `json:"generatedAt"`
 }
 
 // Debate is the adversarial pro/con reading of the evidence.

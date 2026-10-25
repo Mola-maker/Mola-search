@@ -377,6 +377,11 @@ func compressible(ct string) bool {
 	if i := strings.IndexByte(ct, ';'); i >= 0 {
 		ct = strings.TrimSpace(ct[:i])
 	}
+	// A live stream is flushed frame by frame: a compressor would hold the
+	// frames back and turn a pulse into a batch.
+	if ct == "text/event-stream" {
+		return false
+	}
 	return strings.HasPrefix(ct, "text/") || strings.HasSuffix(ct, "javascript") ||
 		strings.HasSuffix(ct, "json") || ct == "image/svg+xml"
 }
