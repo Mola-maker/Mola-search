@@ -1,0 +1,12 @@
+# Runtime data and build outputs
+data/
+*.exe
+*.log
+__pycache__/
+*.pyc
+.env
+.omc/
+.playwright-mcp/
+
+# The upstream source tree is its own repository (fork baseline in _ref/magpie)
+_ref/

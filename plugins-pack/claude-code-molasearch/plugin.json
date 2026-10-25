@@ -1,0 +1,11 @@
+{
+  "name": "molasearch-detective-gateway",
+  "version": "5.0.0",
+  "description": "MolaSearch detective search gateway: 13 equal providers, 30 search modes, verdicts, multimodal forensics and an investigation ledger",
+  "author": "MolaSearch Team (1024 Super Coding Weekend Detective Track)",
+  "mcp": ".mcp.json",
+  "skills": [
+    "../../skills/molasearch-detective",
+    "../../skills/search-modes"
+  ]
+}

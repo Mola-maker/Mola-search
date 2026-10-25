@@ -1,0 +1,9 @@
+{
+  "name": "dsh-plugin-molasearch",
+  "version": "5.0.0",
+  "description": "DeepSeek Harness (Cordis) WebSearchProvider seam for the MolaSearch gateway",
+  "main": "index.ts",
+  "peerDependencies": {
+    "cordis": "^4.0.0"
+  }
+}
