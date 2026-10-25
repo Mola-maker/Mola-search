@@ -1,0 +1,116 @@
+/* Search routes — the page's own styles. Colours are the shell's tokens
+   (MolaMaker's palette), so light and dark follow the window. Motion is one
+   rail per route, driven by a real request's measured time; still() and
+   prefers-reduced-motion show the flow complete, never moving it. */
+
+.rt-wrap {
+  max-width: 1080px;
+  padding: 26px 32px 64px;
+  color: var(--fg);
+}
+
+.rt-hero { display: grid; gap: 6px; margin-bottom: 18px; }
+.rt-title { margin: 0; font-family: var(--font); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.rt-hero-sub { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+.rt-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.rt-tabs button {
+  height: 28px; padding: 0 12px; border: 1px solid var(--line);
+  border-radius: 999px; background: transparent; color: var(--fg-2);
+  font: inherit; font-size: 12.5px; cursor: pointer;
+  transition: color 0.18s var(--ease), background 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+.rt-tabs button:hover { background: var(--card); }
+.rt-tabs button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.rt-body { display: grid; gap: 12px; }
+.rt-list { display: grid; gap: 10px; }
+.rt-say { margin: 0 0 2px; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.rt-empty { margin: 0; color: var(--faint); font-size: 12.5px; }
+
+.rt-card {
+  display: grid; gap: 10px; padding: 14px 16px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+}
+.rt-card header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rt-who { display: grid; gap: 2px; min-width: 0; flex: 1 1 190px; }
+.rt-name { font-size: 13.5px; font-weight: 600; }
+.rt-sub { color: var(--muted); font-size: 11.5px; line-height: 1.45; overflow-wrap: anywhere; }
+
+.rt-chip {
+  padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--fg-2); font-size: 11px; white-space: nowrap;
+}
+.rt-chip.off { color: var(--faint); }
+.rt-keys { color: var(--faint); font-family: var(--code); font-size: 11px; overflow-wrap: anywhere; }
+
+.rt-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+.rt-dot-ok { background: var(--green); }
+.rt-dot-warn { background: var(--amber); }
+.rt-dot-bad { background: var(--red); }
+.rt-dot-off { background: var(--faint); }
+
+/* the flow: a rail whose fill takes the request's own measured time, with a
+   tick at every step's real offset */
+.rt-flow { display: grid; gap: 7px; }
+.rt-flow.idle { color: var(--faint); font-size: 11.5px; }
+.rt-rail {
+  position: relative; height: 6px; border-radius: 999px;
+  background: var(--line); overflow: hidden;
+}
+.rt-fill {
+  position: absolute; inset: 0 auto 0 0; width: 0;
+  border-radius: 999px; background: var(--accent);
+}
+.rt-flow.ok .rt-fill { animation: rt-flow-fill var(--dur, 800ms) var(--ease, ease-out) forwards; }
+.rt-flow.bad .rt-fill { background: var(--red); animation: rt-flow-fill var(--dur, 800ms) var(--ease, ease-out) forwards; }
+.rt-flow.still .rt-fill { width: 100%; animation: none; }
+.rt-tick { position: absolute; top: -2px; width: 2px; height: 10px; background: var(--fg-2); opacity: 0.55; }
+.rt-tick.bad { background: var(--red); opacity: 0.9; }
+.rt-flow-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--muted); font-size: 11.5px; }
+.rt-err { margin: 0; color: var(--red); font-size: 11.5px; line-height: 1.5; overflow-wrap: anywhere; }
+
+@keyframes rt-flow-fill { from { width: 0; } to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .rt-fill { animation: none !important; width: 100%; }
+}
+
+.rt-form {
+  display: flex; flex-wrap: wrap; align-items: end; gap: 10px;
+  padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+}
+.rt-field { display: grid; gap: 4px; color: var(--muted); font-size: 11.5px; }
+.rt-field input {
+  height: 30px; padding: 0 10px; min-width: 180px;
+  background: var(--card-2, var(--card)); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px;
+}
+.rt-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.rt-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rt-gl { color: var(--faint); font-size: 11px; margin-right: 2px; }
+.rt-toggle {
+  height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px;
+  background: transparent; color: var(--fg-2); font: inherit; font-size: 12px; cursor: pointer;
+  transition: color 0.16s var(--ease), background 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+.rt-toggle:hover { background: var(--card-2, var(--card)); }
+.rt-toggle.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.rt-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.rt-actions .text, .rt-test, .rt-save { font-size: 12px; }
+
+.rt-result { display: grid; gap: 10px; margin-top: 4px; }
+.rt-run { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.rt-meta-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.rt-cites { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.rt-cites li { display: grid; gap: 2px; font-size: 12.5px; line-height: 1.45; }
+.rt-cites a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+.rt-cites a:hover { text-decoration: underline; }
+.rt-result h4 { margin: 4px 0 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .rt-wrap { padding: 18px 16px 48px; }
+  .rt-actions { margin-left: 0; }
+  .rt-field input { min-width: 140px; }
+}
