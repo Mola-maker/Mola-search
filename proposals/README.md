@@ -2,11 +2,11 @@
 
 Everything in this folder is a **design proposal**. None of it is a
 description of what the code does today. The as-built references are in
-[`_ref/magpie/docs/subsystems/`](../_ref/magpie/docs/subsystems/):
+[`magpie/docs/subsystems/`](../magpie/docs/subsystems/):
 
-- [overview](../_ref/magpie/docs/subsystems/molasearch-overview.md)
-- [searchdet](../_ref/magpie/docs/subsystems/searchdet.md)
-- [ragstore](../_ref/magpie/docs/subsystems/ragstore.md)
+- [overview](../magpie/docs/subsystems/molasearch-overview.md)
+- [searchdet](../magpie/docs/subsystems/searchdet.md)
+- [ragstore](../magpie/docs/subsystems/ragstore.md)
 
 Files here:
 

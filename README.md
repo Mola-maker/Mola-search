@@ -52,12 +52,12 @@
 
 ## 快速开始（Windows）
 
-前置：Go 1.26+、WebView2 运行时、一个已就位的 magpie 分支源码。
+前置：Go 1.26+、WebView2 运行时。源码就在本仓库的 `magpie/` 里，克隆下来即可编译。
 
 ```powershell
-# 1) 编译（在 fork 源码目录内执行，产物放到仓库根目录的上一级）
-cd _ref\magpie
-go build -tags production -trimpath -ldflags="-s -w -X main.version=mola-v5" -o ..\..\molasearch.exe .
+# 1) 编译（在 magpie/ 里执行，产物放到仓库根目录）
+cd magpie
+go build -tags production -trimpath -ldflags="-s -w -X main.version=mola-v5" -o ..\molasearch.exe .
 ```
 
 ```powershell
@@ -83,7 +83,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start-web.ps1
 .\molasearch.exe mcp search      # 给 agent 的 stdio MCP 服务
 ```
 
-> `_ref/` 是上游 fork 的独立仓库，**不在本仓库的版本控制里**。克隆本仓库得到的是发行层（脚本、SDK、插件包、技能、文档、演示产物）；编译需要另行准备 fork 源码。
+> `magpie/` 是上游 fork 的源码，和发行层（脚本、SDK、插件包、技能、文档、演示产物）在同一个仓库里：克隆一次就能编译。它的上游基线是 `yetone/magpie`，许可证见 `magpie/LICENSE`（MIT）。
 
 ## 密钥
 
