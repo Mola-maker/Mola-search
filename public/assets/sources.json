@@ -1,0 +1,25 @@
+{
+  "assets": [
+    {
+      "file": "yuanbao-official.png",
+      "description": "腾讯元宝 Android 官方应用图标，未经修改",
+      "sourcePage": {
+        "title": "元宝-腾讯旗下AI助手 - 腾讯应用宝",
+        "url": "https://sj.qq.com/appdetail/com.tencent.hunyuan.app.chat",
+        "publisher": "腾讯应用宝",
+        "packageName": "com.tencent.hunyuan.app.chat"
+      },
+      "sourceImage": "https://pp.myapp.com/ma_icon/0/icon_54375103_1792380246/0",
+      "retrievedAt": "2026-10-25T00:03:40Z",
+      "local": {
+        "mediaType": "image/png",
+        "width": 512,
+        "height": 512,
+        "colorType": "RGBA",
+        "bitDepth": 8,
+        "bytes": 24350,
+        "sha256": "014b1a86235ceed90a87db4be4b9477249eeb6d8e65779db039bd0c8bfc1d7a6"
+      }
+    }
+  ]
+}

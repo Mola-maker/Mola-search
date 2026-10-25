@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f5ef" />
+    <meta
+      name="description"
+      content="元宝搜索：单次检索与多 Agent 深度搜索，清晰呈现研究阶段、结果与来源。"
+    />
+    <title>元宝搜索 · 让问题抵达更深处</title>
+    <link rel="stylesheet" href="./web/style.css" />
+    <script type="module" src="./web/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#search-input">跳至搜索框</a>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="./" aria-label="元宝搜索首页">
+          <span class="brand-mark" aria-hidden="true">
+            <span class="brand-mark-fallback">元</span>
+            <img id="brand-logo" src="/assets/yuanbao-official.png" alt="" width="44" height="44" />
+          </span>
+          <span class="brand-wordmark">
+            <strong>元宝</strong>
+            <span>SEARCH STUDIO</span>
+          </span>
+        </a>
+        <div class="header-note"><span aria-hidden="true"></span> 多 Agent 搜索实验场</div>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="hero-title">
+          <p class="eyebrow"><span>01</span> ASK. EXPLORE. UNDERSTAND.</p>
+          <h1 id="hero-title">让每一次提问，<br /><em>抵达更深处。</em></h1>
+          <p class="hero-intro">从一个问题出发，让搜索 Agent 分工协作。<br />不只找到答案，也看清答案来自哪里。</p>
+        </section>
+
+        <section class="scene-section" aria-label="元宝 Agent 三维协作场景">
+          <div class="scene-caption scene-caption-left" aria-hidden="true">
+            <span>LIVE AGENTS</span>
+            <strong id="scene-state-label">准备就绪</strong>
+          </div>
+          <div class="scene-caption scene-caption-right" aria-hidden="true">
+            <span>PLAN · SEARCH · ANALYZE</span>
+            <strong>协作，而非单打独斗</strong>
+          </div>
+          <div
+            id="yuanbao-scene"
+            class="scene-stage"
+            role="img"
+            aria-label="多个元宝 Agent 在中央三维空间中协作，展示规划、搜索、分析与汇总状态"
+          >
+            <div id="scene-fallback" class="scene-fallback">
+              <span class="fallback-yuanbao" aria-hidden="true">元</span>
+              <p>元宝 Agent 已就位</p>
+            </div>
+          </div>
+          <div class="scene-orbit orbit-one" aria-hidden="true"></div>
+          <div class="scene-orbit orbit-two" aria-hidden="true"></div>
+          <p class="scene-footnote"><span aria-hidden="true">✦</span> 每个元宝，都是一位正在思考的 Agent</p>
+        </section>
+
+        <section class="search-section" aria-label="搜索控制">
+          <form id="search-form" novalidate>
+            <fieldset class="search-kind">
+              <legend class="sr-only">选择搜索方式</legend>
+              <label>
+                <input type="radio" name="search-kind" value="single" checked />
+                <span>单次搜索<small>快速获取相关结果</small></span>
+              </label>
+              <label>
+                <input type="radio" name="search-kind" value="deep" />
+                <span>深度搜索<small>多 Agent 迭代研究</small></span>
+              </label>
+            </fieldset>
+
+            <div class="query-field">
+              <label class="sr-only" for="search-input">输入你想搜索的问题</label>
+              <svg class="query-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5"></circle>
+                <path d="m16 16 4 4"></path>
+              </svg>
+              <input
+                id="search-input"
+                name="query"
+                type="search"
+                maxlength="100"
+                autocomplete="off"
+                placeholder="今天，想深入了解什么？"
+                required
+                aria-describedby="query-help form-message"
+              />
+              <span id="query-count" class="query-count" aria-hidden="true">0 / 100</span>
+              <button id="search-button" class="search-button" type="submit">
+                <span>开始探索</span>
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" /></svg>
+              </button>
+              <button id="cancel-button" class="cancel-button" type="button" hidden>取消搜索</button>
+            </div>
+            <div class="query-meta">
+              <p id="query-help">按 Enter 搜索，最多 100 字</p>
+              <div class="query-examples" aria-label="搜索示例">
+                <span>试试：</span>
+                <button type="button" data-query="2026 年人工智能搜索有哪些新趋势？">AI 搜索趋势</button>
+                <button type="button" data-query="如何为第一次长途徒步做准备？">长途徒步指南</button>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-intro">
+                <span class="filter-line" aria-hidden="true"></span>
+                <span>搜索偏好</span>
+              </div>
+              <div class="filter-control">
+                <label for="search-mode">检索模式</label>
+                <select id="search-mode" name="mode">
+                  <option value="0">公网全量</option>
+                  <option value="2">智能混合</option>
+                  <option value="1">优质权威</option>
+                </select>
+              </div>
+              <div class="filter-control">
+                <label for="search-industry">行业定向</label>
+                <select id="search-industry" name="industry">
+                  <option value="">不限行业</option>
+                  <option value="news">新闻资讯</option>
+                  <option value="gov">政务公开</option>
+                  <option value="acad">学术科研</option>
+                  <option value="finance">金融财经</option>
+                </select>
+              </div>
+              <div class="filter-control">
+                <label for="search-freshness">时间范围</label>
+                <select id="search-freshness" name="freshness">
+                  <option value="">不限时间</option>
+                  <option value="d1">过去 24 小时</option>
+                  <option value="d7">过去一周</option>
+                  <option value="d30">过去一月</option>
+                  <option value="m3">过去三月</option>
+                  <option value="y1">过去一年</option>
+                </select>
+              </div>
+            </div>
+            <p id="form-message" class="form-message" role="alert" aria-live="assertive"></p>
+          </form>
+        </section>
+
+        <section id="progress-section" class="progress-section" aria-labelledby="progress-title" hidden>
+          <div class="section-heading compact-heading">
+            <div>
+              <p class="section-index">SEARCH JOURNEY</p>
+              <h2 id="progress-title">正在探索</h2>
+            </div>
+            <p id="progress-message" class="progress-message" aria-live="polite">正在连接搜索服务…</p>
+          </div>
+          <ol id="stage-list" class="stage-list">
+            <li data-stage="planning"><span>01</span><strong>规划问题</strong><small>Planner</small></li>
+            <li data-stage="searching"><span>02</span><strong>并行检索</strong><small>Searcher</small></li>
+            <li data-stage="analyzing"><span>03</span><strong>分析盲区</strong><small>Analyst</small></li>
+            <li data-stage="synthesizing"><span>04</span><strong>汇总发现</strong><small>Synthesizer</small></li>
+            <li data-stage="complete"><span>05</span><strong>完成</strong><small>Result</small></li>
+          </ol>
+        </section>
+
+        <section id="results-section" class="results-section" aria-labelledby="results-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="section-index">SEARCH NOTES</p>
+              <h2 id="results-title">探索发现</h2>
+            </div>
+            <p id="result-summary" class="result-summary"></p>
+          </div>
+
+          <div id="report-panel" class="report-panel" hidden>
+            <div class="report-topline">
+              <div>
+                <span class="report-label">DEEP RESEARCH</span>
+                <h3>研究报告</h3>
+              </div>
+              <div class="coverage-score">
+                <span>总体覆盖率</span>
+                <strong id="overall-coverage">—</strong>
+              </div>
+            </div>
+            <dl id="report-stats" class="report-stats"></dl>
+            <div id="coverage-panel" class="coverage-panel" hidden>
+              <h4>主题覆盖</h4>
+              <div id="coverage-list" class="coverage-list"></div>
+            </div>
+            <div id="key-facts-panel" class="key-facts-panel" hidden>
+              <h4>关键发现</h4>
+              <ol id="key-facts-list"></ol>
+            </div>
+            <div id="open-gaps-panel" class="open-gaps-panel" hidden>
+              <h4>仍待探索</h4>
+              <ul id="open-gaps-list"></ul>
+            </div>
+          </div>
+
+          <div class="sources-heading">
+            <h3>结果与来源</h3>
+            <span id="source-count"></span>
+          </div>
+          <div id="results-list" class="results-list"></div>
+          <p id="empty-results" class="empty-results" hidden>这次没有找到可展示的网页结果。可以换个问法，或放宽搜索偏好后再试。</p>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p><span class="footer-dot" aria-hidden="true"></span> 本地服务运行 · 凭证不会发送至浏览器</p>
+        <p>YUANBAO SEARCH STUDIO <span>© 2026</span></p>
+      </footer>
+    </div>
+    <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <noscript><p class="noscript-message">请启用 JavaScript 以使用元宝搜索。</p></noscript>
+  </body>
+</html>

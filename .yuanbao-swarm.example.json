@@ -1,0 +1,17 @@
+{
+  "enabledTools": ["yuanbao_search", "swarm_iterative_search", "swarm_history", "plugin_manage"],
+  "profiles": [
+    {
+      "name": "policy-watch",
+      "description": "政策监测：gov 定向 + 近 3 个月",
+      "strategy": "news",
+      "maxRounds": 3,
+      "maxSubqueries": 4,
+      "searchersPerQuery": 2,
+      "coverageThreshold": 0.8,
+      "cnt": 20,
+      "industry": "gov",
+      "freshness": "m3"
+    }
+  ]
+}

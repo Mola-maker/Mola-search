@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "yuanbao-swarm-search": {
+      "command": "node",
+      "args": ["<本项目绝对路径>/dist/index.js"],
+      "env": {
+        "TENCENTCLOUD_SECRET_ID": "AKIDxxxxxxxxxxxxxxxxxxxx",
+        "TENCENTCLOUD_SECRET_KEY": "xxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    "yuanbao-swarm-search-dryrun": {
+      "command": "node",
+      "args": ["<本项目绝对路径>/dist/index.js"],
+      "env": { "YUANBAO_DRY_RUN": "1" }
+    }
+  }
+}
