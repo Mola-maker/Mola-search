@@ -1,14 +1,14 @@
 # MolaSearch: as-built overview
 
 MolaSearch is an **independent search-gateway product built on a fork of
-yetone/magpie** (`_ref/magpie` records the upstream base): one binary with
-two added nav pages and three new Go packages on top of magpie's shell and
-gateway. The search engine and memory store are MolaSearch's own. Today the
-window title, data directory and process name still say magpie — closing
-that branding gap is a product decision recorded in
-[`proposals/目标架构_v6.md`](../../../../../proposals/目标架构_v6.md), not
-current behavior. Nothing else in this page describes a future design;
-proposals live outside this repository.
+yetone/magpie** (`magpie/` is that fork, checked into this repository):
+one binary with added nav pages and three new Go packages on top of
+magpie's shell and gateway. The search engine and memory store are
+MolaSearch's own. The window and tray titles, the wordmark, the CLI banner
+and the HTML title now say MolaSearch; `MAGPIE_*` environment variables,
+the `magpie://` URL scheme and the gateway's other technical identifiers
+are kept because they are shared with upstream. Nothing else in this page
+describes a future design; proposals live outside this repository.
 
 ## What runs where
 
@@ -131,19 +131,22 @@ only → dense cosine + BM25 fused by RRF(k=60) → optional remote reranker →
 ## Verification
 
 ```powershell
-cd _ref/magpie
+cd magpie
 go build ./...
 go vet ./internal/searchdet ./internal/ragstore ./internal/mcpsearch ./internal/usmf
 go test ./internal/searchdet/ ./internal/ragstore/ ./internal/mcpsearch/ -count=1 -race
-cd ../..
+cd ..
 python scripts/verify_real_engine.py --exe E:/molasearch/molasearch.exe
 ```
 
 The end-to-end script starts a fresh `web` process on its own port and
 asserts live citations, measured trajectory, SQLite persistence, image
 fingerprints, a three-phase hot swap with a SHA-256 and a backup, hybrid
-search, USMF export, a stakeout diff and agent injection. Its last recorded
-run on this tree is in the commit body of the change that shipped it.
+search, USMF export, a stakeout diff and agent injection. It also checks
+that the run returns a composed report whose id is saved, listed, reopened
+and exported, and that `/api/rag/panels` serves six panels carrying the
+backend's own records and projected points. Its last recorded run on this
+tree is in the commit body of the change that shipped it.
 
 ## Known limits
 
@@ -153,8 +156,14 @@ run on this tree is in the commit body of the change that shipped it.
 - The fusion network opens as a DOM five-column view; the trajectory tab can
   switch to a 2D force-directed canvas where `fusionNetwork.edges` are drawn
   as real co-occurrence edges (adjacent-column links are labelled as layout
-  only). There is no 3D renderer.
-- The binary, window title and settings text are magpie's. The fork's core
-  diff is listed in `PATCHES.md`.
+  only). The database panels likewise draw on a 2D canvas: the vector panel
+  projects the stored embeddings onto their three widest measured dimensions
+  and the graph panel draws the relation topology. There is no WebGL or
+  three.js renderer anywhere in the shell.
+- The binary and process are named `molasearch`, and the window, tray,
+  wordmark and page titles say MolaSearch. `MAGPIE_*` environment variables,
+  the `magpie://` URL scheme and the `magpie` gateway's technical identifiers
+  are deliberately kept because they are shared with upstream. The fork's
+  core diff is listed in `PATCHES.md`.
 - `proposals/` in the outer repository is not built. `TriAudience`,
   `tokenBudget` and `memory_tier` are proposals, not current API fields.

@@ -184,9 +184,10 @@ is the same path with no cooldown: one provider leaves, the run continues.
 ## Verification
 
 ```powershell
-cd _ref/magpie
+cd magpie
 go test ./internal/searchdet/ ./internal/mcpsearch/ -count=1 -race
-python ../scripts/verify_real_engine.py --exe ../molasearch.exe
+cd ..
+python scripts/verify_real_engine.py --exe molasearch.exe
 ```
 
 The unit tests never reach the network (`channelRunner`, `keysFn` and `nowFn`

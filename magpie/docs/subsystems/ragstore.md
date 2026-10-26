@@ -100,7 +100,7 @@ reports how many were skipped. A hot-swap backup uses the same format.
 ## Verification
 
 ```powershell
-cd _ref/magpie
+cd magpie
 go test ./internal/ragstore/ -count=1 -race
 ```
 
