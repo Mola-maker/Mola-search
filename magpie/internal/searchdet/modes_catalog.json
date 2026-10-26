@@ -1,0 +1,1067 @@
+{
+  "version": "4.5.0",
+  "project": "MolaSearch (Magpie-Search Detective Gateway)",
+  "totalModes": 30,
+  "families": [
+    {
+      "id": "augmented",
+      "name": "⚡ 增强式与混合搜索族 (M01~M04)"
+    },
+    {
+      "id": "heuristic",
+      "name": "🧭 启发式与图谱探索族 (M05~M08)"
+    },
+    {
+      "id": "recursive",
+      "name": "🔄 自迭代递归与反思族 (M09~M12)"
+    },
+    {
+      "id": "debate_creative",
+      "name": "⚔️ 多Agent辩论与创造族 (M13~M16)"
+    },
+    {
+      "id": "temporal_topic",
+      "name": "⏳ 时间线与话题垂域族 (M17~M20)"
+    },
+    {
+      "id": "privacy_multimodal",
+      "name": "🛡️ 隐私、视觉与联邦安全族 (M21~M24)"
+    },
+    {
+      "id": "multimodal_cu_geo",
+      "name": "🗺️🎬🖥️ 地图/音视频/CU操设备/搜索模型族 (M25~M30)"
+    }
+  ],
+  "modes": [
+    {
+      "id": "M01",
+      "slug": "search-direct-fast",
+      "mcpTool": "magpie_search_fast",
+      "family": "augmented",
+      "familyName": "⚡ 增强式与混合搜索族",
+      "name": "直通极速搜索 (Direct Fast Search)",
+      "nameEn": "Direct Fast Search",
+      "enabled": true,
+      "latencyTargetMs": 180,
+      "description": "L1 指纹缓存 (<1ms) 短路 + 多源检索 Provider (Mode=2 精确摘要) 单轮极速检索，适用于高频事实核对与低延迟问答。",
+      "modalities": [
+        "search_provider",
+        "l1_cache"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Query -> Privacy Redact -> L1 Hash Cache -> Search Providers(Mode=2) -> Tier-0 Envelope"
+    },
+    {
+      "id": "M02",
+      "slug": "search-hybrid-rag",
+      "mcpTool": "magpie_search_hybrid",
+      "family": "augmented",
+      "familyName": "⚡ 增强式与混合搜索族",
+      "name": "三路混合增强搜索 (Hybrid BM25+Vector+Search RRF)",
+      "nameEn": "Hybrid RAG-Augmented Search",
+      "enabled": true,
+      "latencyTargetMs": 320,
+      "description": "本地热插拔数据库 (BM25 稀疏倒排 + 稠密向量 Dense) 与 多源检索 Provider 实时流三路并发，经加权 RRF(k=60) 融合重排。",
+      "modalities": [
+        "search_provider",
+        "rag_bm25",
+        "rag_vector"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Query -> [Local BM25 || Local Dense Vector || Search Providers] -> Weighted RRF(k=60) -> Tri-Audience Compiler"
+    },
+    {
+      "id": "M03",
+      "slug": "search-hyde-augmented",
+      "mcpTool": "magpie_search_hyde",
+      "family": "augmented",
+      "familyName": "⚡ 增强式与混合搜索族",
+      "name": "假设文档增强搜索 (HyDE Augmented Search)",
+      "nameEn": "Hypothetical Document Embeddings Search",
+      "enabled": true,
+      "latencyTargetMs": 480,
+      "description": "先生成假设性权威通报/标准答案片段，提取稠密向量召回本地 L2/L4 知识库，同时提取专业术语调检索通道实时验证真伪。",
+      "modalities": [
+        "search_provider",
+        "rag_vector"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex"
+      ],
+      "algorithmTopology": "User Query -> Hypothetical Passage Draft -> Embedding Vector Recall + Terminology Search Search -> Self-RAG Verify"
+    },
+    {
+      "id": "M04",
+      "slug": "search-multi-rewrite",
+      "mcpTool": "magpie_search_rewrite",
+      "family": "augmented",
+      "familyName": "⚡ 增强式与混合搜索族",
+      "name": "多查询正交扩展重写搜索 (Multi-Query Rewrite & Expansion)",
+      "nameEn": "Multi-Query Orthogonal Rewrite Search",
+      "enabled": true,
+      "latencyTargetMs": 390,
+      "description": "将模糊提问正交改写为 3~4 个不同视角子查询（官方术语、通俗表述、英文/代码标识符、辟谣反问）并发扇出并经 SimHash 去重。",
+      "modalities": [
+        "search_provider",
+        "github_aihot"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1",
+        "L3"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli"
+      ],
+      "algorithmTopology": "Fuzzy Query -> L3 Habit Recipe Expansion (Q1..Q4) -> Parallel Fan-out -> URL & SimHash Dedup -> RRF Merge"
+    },
+    {
+      "id": "M05",
+      "slug": "search-heuristic-mcts",
+      "mcpTool": "magpie_search_heuristic",
+      "family": "heuristic",
+      "familyName": "🧭 启发式与图谱探索族",
+      "name": "启发式最佳优先 / MCTS 树搜索 (Heuristic Best-First / Agent-UCT)",
+      "nameEn": "Heuristic Best-First & MCTS Search",
+      "enabled": true,
+      "latencyTargetMs": 650,
+      "description": "以启发式函数 h(n) = α·Authority(n) + β·Novelty(n) - γ·Depth(n) 评估候选搜索分支，优先展开信息增益与检索通道权威度最高的节点。",
+      "modalities": [
+        "search_provider",
+        "rag_graph"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L3"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "antigravity"
+      ],
+      "algorithmTopology": "Root Query -> Candidate Branches -> Score h(n)=Authority*Novelty -> Expand Best Node -> Prune Low-Authority Branches"
+    },
+    {
+      "id": "M06",
+      "slug": "search-multihop-bridge",
+      "mcpTool": "magpie_search_multihop",
+      "family": "heuristic",
+      "familyName": "🧭 启发式与图谱探索族",
+      "name": "多跳实体桥接搜索 (Multi-Hop Entity Bridge — 寻剧/寻项目神器)",
+      "nameEn": "Multi-Hop Entity Bridge Search",
+      "enabled": true,
+      "latencyTargetMs": 580,
+      "description": "专为『只记得模糊剧情找剧 / 只记得外号找开源项目』设计：第一跳广撒网提取高频候选桥接实体 E_bridge，第二跳锁定实体精确核验。",
+      "modalities": [
+        "search_provider",
+        "video_bili_yt",
+        "rag_graph"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1",
+        "L2"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Hop-1 (Plot/Clue Broad Search) -> Extract Bridge Entities {E1, E2} -> Hop-2 (Entity Attribute Exact Verify) -> Evidence Chain"
+    },
+    {
+      "id": "M07",
+      "slug": "search-graph-dual",
+      "mcpTool": "magpie_search_graph",
+      "family": "heuristic",
+      "familyName": "🧭 启发式与图谱探索族",
+      "name": "双层知识图谱扩散搜索 (LightRAG Dual-Level Graph Search)",
+      "nameEn": "LightRAG Dual-Level Graph Search",
+      "enabled": true,
+      "latencyTargetMs": 420,
+      "description": "融合 Low-Level 局部一跳实体关系检索与 High-Level 全局主题社区摘要检索，并用检索通道实时补全图谱缺失外部边。",
+      "modalities": [
+        "search_provider",
+        "rag_graph",
+        "rag_vector"
+      ],
+      "memoryTiers": [
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex"
+      ],
+      "algorithmTopology": "Query -> [Low-Level Entity 1-Hop Graph || High-Level Community Summary || External Edge Completion] -> Graph Fusion"
+    },
+    {
+      "id": "M08",
+      "slug": "search-citation-snowball",
+      "mcpTool": "magpie_search_snowball",
+      "family": "heuristic",
+      "familyName": "🧭 启发式与图谱探索族",
+      "name": "引文溯源顺藤摸瓜搜索 (Citation Chain / Primary Source Snowball)",
+      "nameEn": "Primary Citation Snowball Search",
+      "enabled": true,
+      "latencyTargetMs": 540,
+      "description": "从二手新闻/网帖中提取『据XX通报/论文/仓库显示』的一手线索，第二轮强制使用检索通道 Site=一手官网域名 直捣最原始出处。",
+      "modalities": [
+        "search_provider",
+        "github_aihot"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Secondary Report -> Regex/AST Extract Primary Source Clue -> Search(Site=PrimaryDomain, Mode=1) -> Primary Source Anchor"
+    },
+    {
+      "id": "M09",
+      "slug": "search-recursive-arex",
+      "mcpTool": "magpie_search_recursive",
+      "family": "recursive",
+      "familyName": "🔄 自迭代递归与反思族",
+      "name": "自迭代递归审计搜索 (AREX Recursive Claim-Audit Search)",
+      "nameEn": "AREX Recursive Audit Search",
+      "enabled": true,
+      "latencyTargetMs": 720,
+      "description": "内环迭代收集证据；外环将草稿拆解为原子断言，对无证据支撑或孤证断言自动追加检索通道 Site=exclude 排他反查，结案后自动回写知识库。",
+      "modalities": [
+        "search_provider",
+        "rag_vector",
+        "rag_graph"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "antigravity"
+      ],
+      "algorithmTopology": "Inner Loop (Gather) -> Draft Claims -> Outer Loop (Audit Unsupported Claims -> Search Site=exclude Follow-up) -> KB Self-Iteration Writeback"
+    },
+    {
+      "id": "M10",
+      "slug": "search-adaptive-raac",
+      "mcpTool": "magpie_search_adaptive",
+      "family": "recursive",
+      "familyName": "🔄 自迭代递归与反思族",
+      "name": "检索感知自适应控制搜索 (RAAC Novelty-Coverage Control)",
+      "nameEn": "RAAC Adaptive Novelty-Coverage Search",
+      "enabled": true,
+      "latencyTargetMs": 450,
+      "description": "实时计算召回文档的信息新颖度 Novelty 与子问题覆盖度 Coverage：若陷入同质化信息茧房则自动切换渠道重写，达标则立即早停。",
+      "modalities": [
+        "search_provider",
+        "github_aihot",
+        "tavily_exa"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1",
+        "L3"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex"
+      ],
+      "algorithmTopology": "Retrieve Step -> Compute Novelty & Coverage (<1ms CPU) -> [Stop if Coverage>=0.85 | Switch Channel & Rewrite if Novelty<0.12]"
+    },
+    {
+      "id": "M11",
+      "slug": "search-selfrag-abstain",
+      "mcpTool": "magpie_search_selfrag",
+      "family": "recursive",
+      "familyName": "🔄 自迭代递归与反思族",
+      "name": "自反思防幻觉拒答搜索 (Self-RAG Abstain-Aware — 查不到敢说不知道)",
+      "nameEn": "Self-RAG Honesty & Abstain Search",
+      "enabled": true,
+      "latencyTargetMs": 360,
+      "description": "核心防幻觉门控：严格评估相关性 [ISREL] 与证据支持度 [ISSUP]。当检索通道最高权威度 < 2 或全网查无实据时，强制触发 ABSTAIN 拒答印章，绝不瞎编！",
+      "modalities": [
+        "search_provider",
+        "rag_vector"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Multi-Source Search -> Check Max(authority_level) & Independent Domains -> [Pass if >= Threshold | Emit ABSTAIN Guardrail if Insufficient]"
+    },
+    {
+      "id": "M12",
+      "slug": "search-deeprag-tree",
+      "mcpTool": "magpie_search_deeprag",
+      "family": "recursive",
+      "familyName": "🔄 自迭代递归与反思族",
+      "name": "原子决策树搜索 (DeepRAG Binary Decision Tree Search)",
+      "nameEn": "DeepRAG Atomic Decision Tree Search",
+      "enabled": true,
+      "latencyTargetMs": 510,
+      "description": "将复杂推理分解为原子子问题二叉树，在每个节点动态权衡『本地 L2 已核实记忆置信度 vs 外部检索通道检索收益』，最小化冗余调用。",
+      "modalities": [
+        "search_provider",
+        "rag_vector"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex"
+      ],
+      "algorithmTopology": "Decompose Atomic Sub-Questions -> Binary Decision (L2 Memory Hit vs Search Live Search) -> Synthesize Tree"
+    },
+    {
+      "id": "M13",
+      "slug": "search-multiagent-debate",
+      "mcpTool": "magpie_search_debate",
+      "family": "debate_creative",
+      "familyName": "⚔️ 多Agent辩论与创造族",
+      "name": "多 Agent 正反方对抗辩论搜索 (Blue-Pro vs Red-Con vs Judge Court)",
+      "nameEn": "Multi-Agent Pro/Con Debate Search",
+      "enabled": true,
+      "latencyTargetMs": 680,
+      "description": "启动 🔵蓝方取证探员（搜正向权威支撑）vs 🔴红方证伪探员（用检索通道 Site=exclude + 辟谣/漏洞词搜反例）vs ⚖️Self-RAG 大法官同台博弈裁决！",
+      "modalities": [
+        "search_provider",
+        "github_aihot",
+        "rag_graph"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Claim -> [🔵 Blue Agent (Support Query) || 🔴 Red Agent (Counter-Query + Search Site=exclude)] -> 🟣 AIHOT Diversity Audit -> ⚖️ Judge Verdict"
+    },
+    {
+      "id": "M14",
+      "slug": "search-jury-consensus",
+      "mcpTool": "magpie_search_consensus",
+      "family": "debate_creative",
+      "familyName": "⚔️ 多Agent辩论与创造族",
+      "name": "多源陪审团交叉共识搜索 (Multi-Channel Jury & AIHOT Anti-Spam)",
+      "nameEn": "Multi-Channel Jury Consensus Search",
+      "enabled": true,
+      "latencyTargetMs": 490,
+      "description": "同时扇出至 多源检索、GitHub/AIHOT、Tavily/Exa 与本地 RAG 四大独立渠道，施加 AIHOT 域名多样性指数衰减 (γ=0.35) 折叠同源营销号洗稿。",
+      "modalities": [
+        "search_provider",
+        "github_aihot",
+        "tavily_exa",
+        "rag_vector"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L3"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "4-Channel Parallel Fan-out -> Domain Grouping -> Apply Decay γ^(i-1) (γ=0.35) -> Collapse Content Farms -> Cross-Channel Consensus Score"
+    },
+    {
+      "id": "M15",
+      "slug": "search-creative-abductive",
+      "mcpTool": "magpie_search_creative",
+      "family": "debate_creative",
+      "familyName": "⚔️ 多Agent辩论与创造族",
+      "name": "创造性跨域类比与头脑风暴搜索 (Creative Abductive Analogical Search)",
+      "nameEn": "Creative Abductive Analogical Search",
+      "enabled": true,
+      "latencyTargetMs": 620,
+      "description": "面向架构创新与科研头脑风暴：先将问题抽象为第一性原理拓扑结构，再跨学科（检索通道 Industry=acad|finance + GitHub）检索同构解法并融合。",
+      "modalities": [
+        "search_provider",
+        "github_aihot",
+        "search_llm"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Problem -> First-Principles Structural Abstraction -> Cross-Domain Search (Bio/Finance/Systems/GameDev) -> Isomorphic Synthesis"
+    },
+    {
+      "id": "M16",
+      "slug": "search-popper-falsify",
+      "mcpTool": "magpie_search_falsify",
+      "family": "debate_creative",
+      "familyName": "⚔️ 多Agent辩论与创造族",
+      "name": "波普尔证伪优先反事实搜索 (Popperian Falsification Search)",
+      "nameEn": "Popperian Falsification-First Search",
+      "enabled": true,
+      "latencyTargetMs": 410,
+      "description": "基于科学哲学证伪主义：专门构造最严苛的反例查询（『XX 辟谣』『XX 造假』『XX 撤稿』『XX CVE 漏洞』）检验命题是否能被击穿。",
+      "modalities": [
+        "search_provider",
+        "github_aihot"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L3"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "antigravity"
+      ],
+      "algorithmTopology": "Hypothesis H -> Generate Disconfirming Queries (~H) -> Search High-Authority Search -> [Refuted if Counter-Evidence Found | High-Confidence if Survived]"
+    },
+    {
+      "id": "M17",
+      "slug": "search-timeline-evolution",
+      "mcpTool": "magpie_search_timeline",
+      "family": "temporal_topic",
+      "familyName": "⏳ 时间线与话题垂域族",
+      "name": "时间线演进与反转重构搜索 (Temporal Tree & Graphiti Evolution)",
+      "nameEn": "Timeline Evolution & Temporal Tree Search",
+      "enabled": true,
+      "latencyTargetMs": 590,
+      "description": "阶梯式调用检索通道 Freshness (y1 -> m1 -> d7 -> d1) 分段检索，结合 L2 双时序边自动生成面向人类的『🌲 交互式事件演化时间树』，呈现造谣到官方辟谣反转全过程。",
+      "modalities": [
+        "search_provider",
+        "rag_graph",
+        "image_reverse"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Multi-Horizon Search (y1/m1/d7/d1) -> Align valid_from/invalid_at -> Build SUPERSEDES Edges -> Render Interactive Temporal Tree"
+    },
+    {
+      "id": "M18",
+      "slug": "search-topic-cluster",
+      "mcpTool": "magpie_search_topic",
+      "family": "temporal_topic",
+      "familyName": "⏳ 时间线与话题垂域族",
+      "name": "话题聚类与 AIHOT 全网脉络搜索 (Topic Clustering & Event Map)",
+      "nameEn": "Topic Clustering & AIHOT Event Map Search",
+      "enabled": true,
+      "latencyTargetMs": 530,
+      "description": "大宽幅召回后通过向量余弦凝聚聚类划分为 3~6 个核心子话题簇，计算各簇 AIHOT 热度与权威度均值，生成全景脉络图。",
+      "modalities": [
+        "search_provider",
+        "github_aihot"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex"
+      ],
+      "algorithmTopology": "Broad Fetch (Cnt=30) -> Dense Cosine Clustering -> AIHOT Cluster Scoring -> Sub-Topic Narrative Map"
+    },
+    {
+      "id": "M19",
+      "slug": "search-stakeout-watch",
+      "mcpTool": "magpie_search_stakeout",
+      "family": "temporal_topic",
+      "familyName": "⏳ 时间线与话题垂域族",
+      "name": "持续盯梢增量差分搜索 (Continuous Stakeout / Freshness=d1 Watch)",
+      "nameEn": "Continuous Stakeout & Delta Watch Search",
+      "enabled": true,
+      "latencyTargetMs": 310,
+      "description": "进阶挑战核心模式：定时调用检索通道 Freshness=d1 检索 24h 增量网页，与 L2 知识库历史快照做 SimHash 与立场差分，发现结论反转或放票立即告警！",
+      "modalities": [
+        "search_provider",
+        "cu_playwright",
+        "rag_graph"
+      ],
+      "memoryTiers": [
+        "L1",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Cron / Manual Trigger -> Search(Freshness=d1) -> Diff against L2 Snapshot -> [Update invalid_at & Emit DELTA_REVERSAL_ALERT if Changed]"
+    },
+    {
+      "id": "M20",
+      "slug": "search-vertical-authority",
+      "mcpTool": "magpie_search_authority",
+      "family": "temporal_topic",
+      "familyName": "⏳ 时间线与话题垂域族",
+      "name": "权威垂域硬锁定搜索 (Authority-Locked Gov/Acad/Finance Search)",
+      "nameEn": "Authority-Locked Vertical Search",
+      "enabled": true,
+      "latencyTargetMs": 290,
+      "description": "面向医疗健康、食品安全、法律法规、金融数据核查：硬性锁定检索通道 Mode=1 (仅高权威结果) + Industry=gov|acad|finance，直接丢弃 authority_level < 3 的自媒体。",
+      "modalities": [
+        "search_provider"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L3"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Query -> Search(Mode=1, Industry=gov|acad|finance) -> Hard Filter(authority_level >= 3) -> Gold-Standard Citation Pack"
+    },
+    {
+      "id": "M21",
+      "slug": "search-privacy-redacted",
+      "mcpTool": "magpie_search_privacy",
+      "family": "privacy_multimodal",
+      "familyName": "🛡️ 隐私、视觉与联邦安全族",
+      "name": "隐私脱敏零泄漏安全搜索 (Magpie Redact × AstrLink Guard Search)",
+      "nameEn": "Privacy-Preserving Redacted Search",
+      "enabled": true,
+      "latencyTargetMs": 260,
+      "description": "端侧先经合规红线扫描（0ms 阻断时政与个人开盒），再将查询中的姓名/手机号/微信号/密钥替换为 [PERSON_1]/[PHONE_1] 出网检索，返回后在端侧 L0 内存无损还原。",
+      "modalities": [
+        "search_provider",
+        "astrlink_redact"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Raw Query -> Redline Check (Block Politics/Doxxing) -> Mask PII [PERSON_1] -> Outbound Search Search -> Local Unmask Restore"
+    },
+    {
+      "id": "M22",
+      "slug": "search-visual-factcheck",
+      "mcpTool": "magpie_search_visual",
+      "family": "privacy_multimodal",
+      "familyName": "🛡️ 隐私、视觉与联邦安全族",
+      "name": "视觉截图查证搜索 (Aletheia Screenshot & Claim Fact-Check)",
+      "nameEn": "Visual Screenshot Fact-Checking Search",
+      "enabled": true,
+      "latencyTargetMs": 690,
+      "description": "进阶挑战『截图查证』核心模式：VLM 识别聊天记录/网页截图中的核心断言、发言人、UI 伪造痕迹，经隐私脱敏后调检索通道（含 pics 图文比对） 核实真伪。",
+      "modalities": [
+        "search_provider",
+        "vlm_ocr",
+        "image_reverse",
+        "astrlink_redact"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Screenshot Image -> VLM Claim & Tamper Box Extraction -> PII Redact -> Search Providers + Pics Match -> Visual Verification Report"
+    },
+    {
+      "id": "M23",
+      "slug": "search-code-forensics",
+      "mcpTool": "magpie_search_code",
+      "family": "privacy_multimodal",
+      "familyName": "🛡️ 隐私、视觉与联邦安全族",
+      "name": "代码与开源生态取证搜索 (Code, GitHub Issues & MCP Forensics)",
+      "nameEn": "Code & Open-Source Forensics Search",
+      "enabled": true,
+      "latencyTargetMs": 440,
+      "description": "专为极客与架构师设计：并发调用检索通道检索技术深度评测/踩坑贴 + GitHub API 核验真实源码实现、Issues 报错、Release 变更与 Star 曲线。",
+      "modalities": [
+        "search_provider",
+        "github_aihot",
+        "rag_bm25"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Tech Query -> [Search Tech Articles || GitHub Repo/Code/Issues API || Local Code RAG] -> Cross-Verify Implementation vs Claim"
+    },
+    {
+      "id": "M24",
+      "slug": "search-federated-multidb",
+      "mcpTool": "magpie_search_federated",
+      "family": "privacy_multimodal",
+      "familyName": "🛡️ 隐私、视觉与联邦安全族",
+      "name": "联邦多库与多网关路由融合搜索 (Federated Multi-DB & Peer Gateway)",
+      "nameEn": "Federated Multi-DB & Multi-Gateway Search",
+      "enabled": true,
+      "latencyTargetMs": 380,
+      "description": "跨本地与远端多个热插拔数据库（SQLite + Markdown Vault + PostgreSQL + Milvus + ES + Neo4j）及对等 Magpie 网关节点并发联邦检索，统一归一化为 USMF 格式。",
+      "modalities": [
+        "search_provider",
+        "rag_vector",
+        "rag_bm25",
+        "rag_graph",
+        "peer_gateway"
+      ],
+      "memoryTiers": [
+        "L1",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "antigravity"
+      ],
+      "algorithmTopology": "Query -> Fan-out [Active DB + Shadow DB + Peer Magpie Gateways + Search] -> USMF Normalization -> RRF Fusion"
+    },
+    {
+      "id": "M25",
+      "slug": "search-geo-amap",
+      "mcpTool": "magpie_search_geo",
+      "family": "multimodal_cu_geo",
+      "familyName": "🗺️🎬🖥️ 地图/音视频/CU操设备/搜索模型族",
+      "name": "高德/百度地图时空实景核验搜索 (Amap & Baidu LBS Spatial Fact-Check)",
+      "nameEn": "Geo-Spatial LBS Fact-Check Search (Amap/Baidu MCP)",
+      "enabled": true,
+      "latencyTargetMs": 340,
+      "description": "调用高德地图 MCP (@amap/amap-maps-mcp-server) 与百度地图 MCP 核验传言中的大厦/餐厅/演唱会场馆 POI 真实性、经纬度、周边 500m 地标拓扑及事发当日真实天气，协同检索通道核实当地通报。",
+      "modalities": [
+        "amap_lbs",
+        "baidumap_lbs",
+        "search_provider"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Extract Location/Venue -> [Amap MCP (POI + Around + Weather) || Baidu Map MCP || Search Local News] -> Spatial Topology Verification Card"
+    },
+    {
+      "id": "M26",
+      "slug": "search-image-provenance",
+      "mcpTool": "magpie_search_image",
+      "family": "multimodal_cu_geo",
+      "familyName": "🗺️🎬🖥️ 地图/音视频/CU操设备/搜索模型族",
+      "name": "反向以图搜图与最早出处溯源搜索 (TinEye + Google Lens + Image Reverse Search)",
+      "nameEn": "Reverse Image & Earliest Provenance Search",
+      "enabled": true,
+      "latencyTargetMs": 520,
+      "description": "专治『旧图新炒』与裁剪造假：先算本地 pHash/dHash (<1ms)，再并发调 TinEye (按最早发布时间 crawl_date asc 排序) + Google Lens (SerpApi) + 检索通道 pics 锁定全网最早原始母图。",
+      "modalities": [
+        "image_reverse",
+        "search_provider",
+        "rag_vector"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Input Image -> pHash Cache Check -> [TinEye Earliest Crawl Date || Google Lens Visual Entity || Image Reverse Search] -> Provenance Diff Card"
+    },
+    {
+      "id": "M27",
+      "slug": "search-video-keyframe",
+      "mcpTool": "magpie_search_video",
+      "family": "multimodal_cu_geo",
+      "familyName": "🗺️🎬🖥️ 地图/音视频/CU操设备/搜索模型族",
+      "name": "视频九宫格关键帧与弹幕字幕搜索 (TwelveLabs + Bilibili/yt-dlp + 3x3 Contact Sheet)",
+      "nameEn": "Video 3x3 Keyframe & Danmaku/Transcript Search",
+      "enabled": true,
+      "latencyTargetMs": 890,
+      "description": "先用 yt-dlp / bilibili-mcp 极速拉取时间轴字幕与高能指路/辟谣弹幕，再用 FFmpeg 抽取镜头切换帧拼合为单张带时间戳的 3x3 九宫格大图（省 85% 视觉 Token），配合 TwelveLabs Marengo 视频向量与检索通道查证。",
+      "modalities": [
+        "video_bili_yt",
+        "twelvelabs_video",
+        "search_provider"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "antigravity"
+      ],
+      "algorithmTopology": "Video URL/File -> Fetch Subtitles & Bilibili Danmaku (<400ms) -> FFmpeg Scene-Cut 3x3 Contact Sheet -> VLM + TwelveLabs + Search Verify"
+    },
+    {
+      "id": "M28",
+      "slug": "search-computer-use",
+      "mcpTool": "magpie_search_cu",
+      "family": "multimodal_cu_geo",
+      "familyName": "🗺️🎬🖥️ 地图/音视频/CU操设备/搜索模型族",
+      "name": "Computer-Use 浏览器与桌面操设备搜索 (@playwright/mcp a11y + UI-TARS + OmniParser SoM)",
+      "nameEn": "Computer-Use Browser & Desktop GUI Search",
+      "enabled": true,
+      "latencyTargetMs": 1150,
+      "description": "突破无 API 围墙花园：优先用 @playwright/mcp 读取 1.5KB 无障碍语义树 (a11y YAML) 极速点击筛选网页；遇桌面软件（如 PC 微信搜一搜）则唤醒 UI-TARS-1.5 + OmniParser V2 SoM 编号锚框操控并截屏脱敏取证。",
+      "modalities": [
+        "cu_playwright",
+        "cu_uitars_desktop",
+        "astrlink_redact",
+        "search_provider"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Task -> Tier-2 Playwright a11y Tree Action (<400ms) OR Tier-3 UI-TARS + OmniParser SoM Click -> Screenshot + CU Visual Redact -> Search Cross-Check"
+    },
+    {
+      "id": "M29",
+      "slug": "search-phone-adb",
+      "mcpTool": "magpie_search_phone",
+      "family": "multimodal_cu_geo",
+      "familyName": "🗺️🎬🖥️ 地图/音视频/CU操设备/搜索模型族",
+      "name": "Phone-Use 手机 ADB 真机操控 App 搜索 (Open-AutoGLM / Mobile-Agent-v2 ADB)",
+      "nameEn": "Phone-Use Mobile ADB GUI Agent Search",
+      "enabled": true,
+      "latencyTargetMs": 1650,
+      "description": "针对仅限手机 App 的封闭场景（大麦 App 实时选座余票、小红书/抖音深层评论、封闭小程序）：通过 Android ADB MCP + AutoGLM-Phone 自动唤醒 App 点击搜索、截屏脱敏并与检索通道交叉核实。",
+      "modalities": [
+        "cu_autoglm_adb",
+        "astrlink_redact",
+        "search_provider"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L1",
+        "L2",
+        "L4"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "antigravity"
+      ],
+      "algorithmTopology": "Mobile Task -> ADB Wake App (Damai/Xiaohongshu/WeChat) -> AutoGLM SoM Tap & Scroll -> Screencap + Privacy Blur -> Search Verify"
+    },
+    {
+      "id": "M30",
+      "slug": "search-model-ensemble",
+      "mcpTool": "magpie_search_models",
+      "family": "multimodal_cu_geo",
+      "familyName": "🗺️🎬🖥️ 地图/音视频/CU操设备/搜索模型族",
+      "name": "多搜索大模型交叉 Grounding 蒸馏搜索 (Search + Perplexity Sonar + Gemini + OpenAI)",
+      "nameEn": "Multi-Search-Model Grounded Ensemble Search",
+      "enabled": true,
+      "latencyTargetMs": 780,
+      "description": "复用 Magpie 多模型路由层，同时向 多源检索 DeepSearch、Perplexity Sonar/Agent API、Gemini 2.5 Search Grounding、OpenAI web_search_preview 扇出提问，提取高重合度内联引用蒸馏零幻觉报告。",
+      "modalities": [
+        "search_provider",
+        "search_llm"
+      ],
+      "memoryTiers": [
+        "L0",
+        "L2",
+        "L3"
+      ],
+      "targetAgents": [
+        "claude-code",
+        "dsh",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "opencode",
+        "antigravity"
+      ],
+      "algorithmTopology": "Query -> Fan-out [Search DeepSearch || Perplexity Sonar || Gemini Grounding || OpenAI WebSearch] -> Citation Overlap Distillation"
+    }
+  ],
+  "multimodalSuppliers": [
+    {
+      "id": "web-search-mcp",
+      "name": "检索 Provider API & MCP（可选，按配置启用）",
+      "category": "web_vertical",
+      "badge": "🔌 多源检索通道之一",
+      "endpoint": "https://wsa.tencentcloudapi.com (Action=SearchPro) & https://api.wsa.cloud.tencent.com/Mcp",
+      "envKeys": [
+        "TENCENT_SECRET_ID",
+        "TENCENT_SECRET_KEY"
+      ],
+      "enabled": true,
+      "coreLock": false,
+      "capabilities": [
+        "搜索 Provider 的 Mode/Freshness/Site 参数",
+        "权威等级 0~5",
+        "图文反查（Provider 支持时）"
+      ]
+    },
+    {
+      "id": "amap-lbs-mcp",
+      "name": "高德地图 MCP & Web API (@amap/amap-maps-mcp-server)",
+      "category": "geo_map",
+      "badge": "🗺️ 国内空间核验首选",
+      "endpoint": "https://mcp.amap.com/sse & https://restapi.amap.com/v5/place/text",
+      "envKeys": [
+        "AMAP_MAPS_API_KEY"
+      ],
+      "enabled": true,
+      "coreLock": false,
+      "capabilities": [
+        "maps_text_search",
+        "maps_around_search",
+        "maps_search_detail",
+        "maps_regeo",
+        "maps_weather",
+        "maps_direction"
+      ]
+    },
+    {
+      "id": "baidumap-lbs-mcp",
+      "name": "百度地图 MCP (@baidumap/mcp-server-baidu-map)",
+      "category": "geo_map",
+      "badge": "🗺️ 双图交叉验证",
+      "endpoint": "npx -y @baidumap/mcp-server-baidu-map",
+      "envKeys": [
+        "BAIDU_MAP_API_KEY"
+      ],
+      "enabled": true,
+      "coreLock": false,
+      "capabilities": [
+        "map_search_places",
+        "map_place_details",
+        "map_geocode",
+        "map_distance_matrix",
+        "map_weather"
+      ]
+    },
+    {
+      "id": "tineye-google-lens",
+      "name": "TinEye MatchEngine + Google Lens (SerpApi) + ColQwen2",
+      "category": "image_reverse",
+      "badge": "🖼️ 反向搜图与最早出处溯源",
+      "endpoint": "https://serpapi.com/search?engine=google_lens & https://api.tineye.com/rest/search/",
+      "envKeys": [
+        "SERPAPI_API_KEY",
+        "TINEYE_API_KEY"
+      ],
+      "enabled": true,
+      "coreLock": false,
+      "capabilities": [
+        "earliest_crawl_date",
+        "cropped_image_match",
+        "visual_entity_ocr",
+        "local_phash_colqwen2"
+      ]
+    },
+    {
+      "id": "twelvelabs-bilibili-video",
+      "name": "TwelveLabs Marengo 3.0 MCP + Bilibili/YouTube 字幕弹幕 + FFmpeg 3x3 九宫格",
+      "category": "video_keyframe",
+      "badge": "🎬 视频关键帧与弹幕查证",
+      "endpoint": "https://mcp-alpic.twelvelabs.io & yt-dlp + ffmpeg scene-cut tile=3x3",
+      "envKeys": [
+        "TWELVELABS_API_KEY",
+        "BILIBILI_SESSDATA"
+      ],
+      "enabled": true,
+      "coreLock": false,
+      "capabilities": [
+        "marengo_video_vector",
+        "bilibili_danmaku_xml",
+        "yt_dlp_subtitles",
+        "ffmpeg_3x3_contact_sheet"
+      ]
+    },
+    {
+      "id": "cu-playwright-uitars-autoglm",
+      "name": "Computer-Use & Phone-Use (@playwright/mcp + UI-TARS-1.5 + OmniParser V2 + AutoGLM ADB)",
+      "category": "computer_use",
+      "badge": "🖥️📱 操设备破壁搜索 (含端侧截图隐私打码)",
+      "endpoint": "local://playwright-a11y + local://uitars-omniparser + adb://127.0.0.1:5037",
+      "envKeys": [
+        "AUTOGLM_API_KEY",
+        "ADB_DEVICE_SERIAL"
+      ],
+      "enabled": true,
+      "coreLock": false,
+      "capabilities": [
+        "playwright_a11y_yaml",
+        "omniparser_som_boxes",
+        "uitars_desktop_click",
+        "autoglm_adb_phone_app",
+        "cu_visual_redact"
+      ]
+    },
+    {
+      "id": "search-grounded-llms",
+      "name": "专用搜索大模型陪审团 (多源 DeepSearch + Perplexity Sonar + Gemini Grounding + OpenAI WebSearch)",
+      "category": "search_llm",
+      "badge": "🧠 多搜索模型引用蒸馏",
+      "endpoint": "http://127.0.0.1:3425/v1/chat/completions (Magpie Multi-Provider Router)",
+      "envKeys": [
+        "PERPLEXITY_API_KEY",
+        "GEMINI_API_KEY",
+        "OPENAI_API_KEY"
+      ],
+      "enabled": true,
+      "coreLock": false,
+      "capabilities": [
+        "multi_source_search",
+        "perplexity_sonar_deep_research",
+        "gemini_google_search_grounding",
+        "openai_web_search_preview"
+      ]
+    }
+  ]
+}

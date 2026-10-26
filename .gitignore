@@ -1,11 +1,24 @@
+# ============================================================
 # 本地凭证：真实密钥只放 .env 或 .yuanbao-swarm.json，永不提交
+# ============================================================
 .env
 .env.*
 !.env.example
 .yuanbao-swarm.json
 mcp.json
 
-# 运行期状态：工具开关、自定义 Profile、搜索历史（含个人使用痕迹）
+# Runtime data and build outputs
+data/
+agent-home/
+*.exe
+*.exe~
+*.log
+__pycache__/
+*.pyc
+.omc/
+.playwright-mcp/
+
+# 元宝插件的运行期状态：工具开关、自定义 Profile、搜索历史（含个人使用痕迹）
 .yuanbao-swarm-data/
 
 # 依赖与构建临时目录
@@ -15,4 +28,21 @@ node_modules/
 # 编辑器 / 系统噪音
 .DS_Store
 Thumbs.db
-*.log
+
+# Agent worktrees: each is an embedded checkout of its own branch, so a
+# gitlink here would point at a local-only commit no cloner can fetch.
+.claude/
+
+# Draft screenshots that render the Windows user name in the app's own
+# "keys are written to ..." line. Superseded; nothing links to them.
+demo/2026-10-25/legacy/
+
+# Scratch dumps from a single debugging run, not evidence.
+/_demo2.json
+/_q2.json
+
+# The push-readiness audit names this machine's own paths and services.
+demo/2026-10-25/pii-secret-audit.md
+
+# The upstream source tree is its own repository (fork baseline in _ref/magpie)
+_ref/

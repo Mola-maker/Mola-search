@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "molasearch": {
+      "command": "molasearch.exe",
+      "args": ["mcp", "search"]
+    }
+  }
+}

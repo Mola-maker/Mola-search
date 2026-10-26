@@ -1,0 +1,189 @@
+{
+ "source": "https://datasets-server.huggingface.co/rows?dataset=google%2Fframes-benchmark&config=default&split=test",
+ "dataset": "google/frames-benchmark",
+ "split": "test",
+ "offsets": "0..19",
+ "fetched_at_utc": "2026-10-25T06:01:31.110551+00:00",
+ "questions": [
+  {
+   "query_id": 0,
+   "prompt": "If my future wife has the same first name as the 15th first lady of the United States' mother and her surname is the same as the second assassinated president's mother's maiden name, what is my future wife's name? ",
+   "gold": "Jane Ballou",
+   "link1": "https://en.wikipedia.org/wiki/President_of_the_United_States",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 1,
+   "prompt": "Imagine there is a building called Bronte tower whose height in feet is the same number as the dewey decimal classification for the Charlotte Bronte book that was published in 1847. Where would this building rank among tallest buildings in New York City, as of August 2024?",
+   "gold": "37th",
+   "link1": "https://en.wikipedia.org/wiki/Charlotte_Bront%C3%AB",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 2,
+   "prompt": "How many years earlier would Punxsutawney Phil have to be canonically alive to have made a Groundhog Day prediction in the same state as the US capitol?",
+   "gold": "87",
+   "link1": "https://en.wikipedia.org/wiki/Punxsutawney_Phil",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 3,
+   "prompt": "As of August 1, 2024, which country were holders of the FIFA World Cup the last time the UEFA Champions League was won by a club from London?",
+   "gold": "France",
+   "link1": "https://en.wikipedia.org/wiki/FIFA_World_Cup",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 4,
+   "prompt": "What is the name of the vocalist from the first band to make it in the top 200 under the record label that produced the third studio album for Dismal Euphony?",
+   "gold": "Jens Kidman",
+   "link1": "https://en.wikipedia.org/wiki/Dismal_Euphony",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 5,
+   "prompt": "According to the 2000 United States census, what was the 2000 population of the birth city of the only 21st-century mayor of Austin, Texas who also served as mayor in the 1990s? Round your answer to the nearest thousand.",
+   "gold": "506000",
+   "link1": "https://en.wikipedia.org/wiki/Mayor_of_Austin",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 6,
+   "prompt": "I have an element in mind and would like you to identify the person it was named after. Here's a clue: The element's atomic number is 9 higher than that of an element discovered by the scientist who discovered Zirconium in the same year.",
+   "gold": "Mendelevium is named after Dmitri Mendeleev.",
+   "link1": "https://en.wikipedia.org/wiki/Zirconium",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 7,
+   "prompt": "As of Aug 3, 2024, the artist who released the album \"Father of Asahd\" went to the same high school as an Olympic diver. How many Olympic teams did this diver participate on?",
+   "gold": "2",
+   "link1": "https://en.wikipedia.org/wiki/Father_of_Asahd",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 8,
+   "prompt": "A general motors vehicle is named after the largest ward in the country of Monaco.  How many people had walked on the moon as of the first model year of the vehicle? Note: the model year is not the same as the year the model was first produced.",
+   "gold": "4",
+   "link1": "https://en.wikipedia.org/wiki/Monaco",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 9,
+   "prompt": "The Pope born Pietro Barbo ended a long-running war two years after his papacy began, which famous conflict, immortalized in tapestry took place 400 years earlier?",
+   "gold": "The Battle of Hastings.",
+   "link1": "https://en.wikipedia.org/wiki/Pope_Paul_II",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 10,
+   "prompt": "An Australian artist, born the same year as artist Janet Cumbrae Stewart and fellow member of the Melbourne Society of Women Painters and Sculptors, had her painting featured on the cover of Women's World Magazine in 1923. What is the name of the painting?",
+   "gold": "Reve d'Or",
+   "link1": "https://en.wikipedia.org/wiki/Janet_Cumbrae_Stewart",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 11,
+   "prompt": "As of July 1, 2024, what is the parent company of the current record label of the singer of Edge of Seventeen?",
+   "gold": "Warner Music Group",
+   "link1": "https://en.wikipedia.org/wiki/Edge_of_Seventeen",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 12,
+   "prompt": "The Basibasy mine is located in Madagascar. This mine is abundant in a specific chemical element that was discovered for the first time in 1791. The person who discovered this element was born on what is now known as a major US holiday - what holiday is this?",
+   "gold": "Christmas",
+   "link1": "https://en.wikipedia.org/wiki/Basibasy_mine",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 13,
+   "prompt": "One of Barbara Kingsolver's best known novels is about an American missionary family which moves to Africa. At the time, the country they move to was a Belgian colony. Which year did it become independent?",
+   "gold": "1960",
+   "link1": "https://en.wikipedia.org/wiki/Barbara_Kingsolver",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 14,
+   "prompt": "Which football player got 15 or more assists in La Liga during the 2010-2011 season and also played for Arsenal at one point in his career?",
+   "gold": "This was Mesut Ozil.",
+   "link1": "https://en.wikipedia.org/wiki/2010–11_La_Liga",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 15,
+   "prompt": "In Slovakia there is a well known Film Festival called the Bratistlava International Film Festival. What city/ town was the film editor for the Grand Prix winner of 2003 born in?",
+   "gold": "Roudnice nad Labem",
+   "link1": "https://en.wikipedia.org/wiki/Bratislava_International_Film_Festival",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 16,
+   "prompt": "On March 7th, 2012, the director James Cameron explored a very deep underseas trench.  As of August 3, 2024, how many times would the tallest building in San Francisco fit end to end from the bottom of the New Britain Trench to the surface of the ocean? The answer should be a rounded-off whole number.   ",
+   "gold": "28",
+   "link1": "https://en.wikipedia.org/wiki/James_Cameron",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 17,
+   "prompt": "In August of 2024, what is the first name of the mayor of the U.S. state capital city who attended the same university as at least one U.S. president and whose city is home to an outgoing or former full member of the Big 12 Conference",
+   "gold": "Leirion",
+   "link1": "https://en.wikipedia.org/wiki/Big_12_Conference",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 18,
+   "prompt": "How many years after the founding of the 50th most populous US city, based on 2023 estimate population data, did Frank Fox receive UK Patent (1344259)?",
+   "gold": "98 Years (Arlington, TX & Rubik's Cube)",
+   "link1": "https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  },
+  {
+   "query_id": 19,
+   "prompt": "As of August 4, 2024, in what state was the first secretary of the latest United States federal executive department born?",
+   "gold": "Pennsylvania",
+   "link1": "https://en.wikipedia.org/wiki/United_States_federal_executive_departments#Former_departments",
+   "sensitive_hits": [],
+   "excluded": false,
+   "exclude_reason": null
+  }
+ ]
+}

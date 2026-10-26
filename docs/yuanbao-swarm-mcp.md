@@ -1,0 +1,131 @@
+# yuanbao-swarm-search-mcp
+
+腾讯云「元宝搜索」（Tencent Yuanbao Search，`wsa` SearchPro API）+ **群智能体迭代搜索** 的**动态 MCP 插件**。
+
+- 接口文档全量对齐：https://cloud.tencent.com/document/product/1806/121811
+- 群智能体架构参考：[kyegomez/swarms](https://github.com/kyegomez/swarms)、[Deep Research Agents 系统综述 (arXiv:2506.18096)](https://arxiv.org/html/2506.18096v2)、[self-refine（GENERATE→CRITIQUE→REFINE 循环）](https://github.com/topics/self-refine)、[lastmile-ai/mcp-agent](https://github.com/lastmile-ai/mcp-agent)
+
+## 架构
+
+```
+            ┌────────────────────────────────────────────────────────┐
+            │                swarm_iterative_search                  │
+            │                                                        │
+ Query ───▶ │  Planner ──分解──▶ Aspect×N（子查询+策略变体）           │
+            │     │                                                 │
+            │     ▼            ┌──────────────────────┐             │
+            │  Searcher Swarm（并行多路：公网/混合/行业/时效）│──▶ 语料  │
+            │     │            └──────────────────────┘             │
+            │     ▼                                                 │
+            │  Analyst（去重合并 + 方面覆盖率 + 盲区关键词）            │
+            │     │  覆盖率 ≥ 阈值？──是──▶ Synthesizer（汇总报告）     │
+            │     └──否──▶ 盲区派生精化子查询 ──▶ 下一轮迭代            │
+            └────────────────────────────────────────────────────────┘
+```
+
+**动态 MCP**：工具集由 `enabledTools` + Swarm Profiles 驱动，`plugin_manage` 工具可在**运行时**启用/停用工具、注册/删除 Profile，并通过 `notifications/tools/list_changed` 即时通知客户端；启停状态与自定义 Profile 持久化到数据目录，重启后保留。配置文件 `.yuanbao-swarm.json` 亦可在启动时注入 Profile 与工具开关。
+
+## 快速开始
+
+```bash
+npm install
+npm run build
+
+# 无密钥冒烟测试（干跑夹具，不发网络请求）
+YUANBAO_DRY_RUN=1 npm run smoke
+
+# 实连模式：在项目 .env 配置腾讯云凭证（需开通元宝搜索 wsa 权限）
+node dist/index.js
+
+# 启动独立 3D 搜索页（凭证仅在本地服务端加载）
+node dist/web/server.js
+# 浏览器打开 http://127.0.0.1:3210
+```
+
+### 接入 MCP 客户端（如 ZCode / Claude Desktop / Cline）
+
+复制 `mcp.json.example` 到客户端 MCP 配置（Windows 下 command 用 `node`、args 填 dist 绝对路径）。环境变量缺失时插件会启动失败并给出明确提示；设置 `YUANBAO_DRY_RUN=1` 可先体验干跑模式。
+
+## Tools（4 个）
+
+### `yuanbao_search` — 单次检索
+SearchPro 透传，**全参数对齐文档**：
+
+| 参数 | 约束（非法即拒绝） |
+|---|---|
+| `query` | 必填，≤100 字符 |
+| `mode` | `0` 公网全量 / `1` 优质权威垂源（旗舰）/ `2` 混合（旗舰） |
+| `site` | `"qq.com"` 指定；`"exclude:a.com\|b.com"` 排除（≤5 个域名） |
+| `cnt` | `10/20/30/40/50` |
+| `industry` | `gov/news/acad/finance` |
+| `freshness` | `d[1-30]` / `m[1-12]` / `y[1-5]` / `yyyy-mm-dd` / 区间 |
+| `deeplinks` | 旗舰版返回主站延伸子链接 |
+
+返回：标题/URL/站点/日期/相关性得分/权威等级(0-5)/动态摘要/图片/延伸链接。
+
+### `swarm_iterative_search` — 群智能体迭代深搜
+| 参数 | 说明 |
+|---|---|
+| `query` | 研究问题；含 `，、vs 和 与 以及` 等分隔符时 Planner 按子主题分解 |
+| `profile` | 档位名（默认 `deep-research`） |
+| `max_rounds` / `max_subqueries` / `coverage_threshold` / `cnt` / `mode` / `site` / `industry` / `freshness` | 覆盖 Profile 的运行时参数 |
+
+流程：分解 → 并行多路检索（单路失败不拖垮整体）→ 去重合并（URL 归一化 + 标题 Jaccard>0.85）→ 覆盖率与盲区分析（CJK 二元组分词，无外部 NLP 依赖）→ **从实际返回标题和摘要提取新线索，结合原提示词生成下一轮针对性补搜**（过滤原词、虚词与重复查询，防循环）→ 收敛（覆盖率≥阈值 / 无精化查询 / 达轮次上限）→ 综合排序（0.6×相关性 + 0.25×权威 + 0.15×新鲜度）→ 输出报告：迭代轨迹、方面覆盖、发现聚类、关键事实、遗留盲区、引用列表。支持 MCP progress 进度通知与请求取消（`signal`）。
+
+### 3D 浏览器搜索页
+独立页面位于 `http://127.0.0.1:3210`，通过本地 NDJSON API 展示真实搜索阶段、结果和深度研究报告。六个元宝 Agent 使用绿色透明玻璃球建模，官方图标特征由动态白色面部承载；检索时流动、挤压、黏连并堆叠，规划/搜索/分析/汇总/完成/错误具有不同表情。支持减少动态效果、页面离屏暂停及 WebGL 不可用降级。凭证不进入浏览器。
+
+### `swarm_history` — 深搜历史
+`list` 最近记录 / `get` 按 ID 取完整报告；同时暴露为资源 `yuanbao://history/{id}`。
+
+### `plugin_manage` — 插件动态管理（动态 MCP 核心）
+`status` / `list_tools` / `enable_tool` / `disable_tool` / `list_profiles` / `register_profile` / `remove_profile` / `reload`。注册 Profile 示例：
+
+```json
+{ "action": "register_profile", "profile": {
+  "name": "my-policy-watch", "description": "政策监测", "strategy": "news",
+  "maxRounds": 3, "maxSubqueries": 4, "searchersPerQuery": 2,
+  "coverageThreshold": 0.8, "cnt": 20, "industry": "gov", "freshness": "m3" } }
+```
+
+内置 Profile：`deep-research` / `news-scan` / `academic-dive` / `finance-watch` / `quick-look`。
+
+## Resources & Prompts
+
+- 资源：`yuanbao://server/info`（运行状态）、`yuanbao://history/{id}`（历史报告，模板资源）
+- 提示模板：`deep-research-brief`（一键深搜简报工作流）、`gap-followup`（对历史报告盲区补搜）
+
+## 工程特性
+
+- **零云 SDK 依赖**：自实现腾讯云 API 3.0（TC3-HMAC-SHA256）签名
+- 令牌桶限流（默认 5 QPS）、10 分钟 TTL+LRU 结果缓存（省每月 2000 次免费额度）、429/内部错误指数退避重试
+- 错误码透传：`InvalidParameter` / `RequestLimitExceeded` / `ResourceNotFound` / `UnauthorizedOperation` 等映射为 MCP `isError`
+- 日志全部走 stderr，stdout 专属 MCP 协议
+
+## 配置
+
+环境变量：`TENCENTCLOUD_SECRET_ID` / `TENCENTCLOUD_SECRET_KEY` / `YUANBAO_ENDPOINT` / `YUANBAO_QPS` / `YUANBAO_TIMEOUT_MS` / `YUANBAO_MAX_RETRIES` / `YUANBAO_DRY_RUN` / `YUANBAO_DATA_DIR`。
+配置文件：`.yuanbao-swarm.json`（`enabledTools`、`profiles`）。优先级：进程环境变量 > `.env` > 配置文件 > 默认值。`.env` 由服务端自动加载，不会发送到浏览器。
+
+## 目录结构
+
+```
+src/
+├── index.ts              # 入口（stdio transport）
+├── config.ts             # 配置加载 + 内置 Profile
+├── core/                 # types / signer(TC3) / cache(TTL-LRU) / wsa-client
+├── swarm/                # planner / analyst / synthesizer / engine（迭代循环）
+├── mcp/                  # server(动态注册) / tools / extras(resources+prompts) / state(持久化)
+├── web/                  # 本地 NDJSON API + 静态文件服务
+└── util/                 # log(stderr) / text(分词·去重·历史存储)
+web/                      # Three.js 绿色玻璃球场景、页面交互与样式
+public/assets/            # 腾讯元宝官方图标与来源记录
+test/smoke.mjs            # stdio 全链路冒烟测试（干跑）
+test/regression-core.mjs  # API/缓存/取消/规划/分析/迭代回归
+test/regression.mjs       # 历史安全、配置、持久化与统计回归
+test/web.mjs              # Web API、静态资源与 NDJSON 回归
+```
+
+## License
+
+MIT

@@ -1,31 +1,96 @@
-# yuanbao-swarm-search-mcp
+# MolaSearch v5
 
-腾讯云「元宝搜索」（Tencent Yuanbao Search，`wsa` SearchPro API）+ **群智能体迭代搜索** 的**动态 MCP 插件**。
+多源联网查证的检索取证工作台：13 条地位相同的搜索通道、30 种检索模式、六种记忆后端、39 个可测连通性的供应商。
 
-- 接口文档全量对齐：https://cloud.tencent.com/document/product/1806/121811
-- 群智能体架构参考：[kyegomez/swarms](https://github.com/kyegomez/swarms)、[Deep Research Agents 系统综述 (arXiv:2506.18096)](https://arxiv.org/html/2506.18096v2)、[self-refine（GENERATE→CRITIQUE→REFINE 循环）](https://github.com/topics/self-refine)、[lastmile-ai/mcp-agent](https://github.com/lastmile-ai/mcp-agent)
+> **English (short).** MolaSearch is a real multi-source verification search workbench — a Wails v3 desktop app that also serves a browser UI and a stdio MCP server. It runs 13 equal search channels (Tencent Yuanbao / WSA SearchPro among them), 30 search modes, six RAG stores behind one `Store` interface, and a provider platform with 39 providers whose connectivity checks are real vendor calls. Built as a distribution on a fork of [magpie](https://github.com/yetone/magpie). Benchmarks are still a pilot; no scores are claimed here.
 
-## 架构
+![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
+![Wails](https://img.shields.io/badge/Wails-v3-DF0000)
+![Platform](https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white)
 
+---
+
+> **这个仓库里有两个可独立运行的程序。**
+> 主体是下面的 MolaSearch 检索工作台（Go，源码在 [`magpie/`](magpie/)）；根目录另有**元宝群智能体迭代搜索 MCP 插件**（Node/TypeScript，`src/`、`web/`、`dist/`），说明见[下文](#元宝群智能体-mcp-插件根目录)与 [`docs/yuanbao-swarm-mcp.md`](docs/yuanbao-swarm-mcp.md)。
+
+## 这是什么
+
+一个**能查、能证、查不到敢说不知道**的检索工作台，而不是又一个聊天框。
+
+- **没有主通道。** 13 条通道并发执行，各自有超时和熔断器；任一通道停用或失败，其余继续服务本次查证。腾讯云 **元宝 / WSA SearchPro** 是其中一条一等通道（TC3 签名，或官方 MCP 端点的 WSA API Key），不是唯一入口。
+- **判定来自证据。** 结果为 `VERIFIED / REFUTED / UNVERIFIED / ABSTAIN`；没有证据就是 `ABSTAIN`，不编答案。每条引用带真实 URL、域名、通道和权威级。
+- **记忆可换后端而不丢数据。** 六种存储后端共用一个 `Store` 接口，热插拔分三阶段：备份 → 双写 → 重算向量并做 SHA-256 语料比对，不一致就拒绝切换、老库继续服务。
+- **三种入口，一套引擎。** 桌面窗口、`http://127.0.0.1:3430` 的网页、`molasearch.exe mcp search` 的 stdio MCP 服务。
+
+## 真实与已验证
+
+只列仓库里有代码或截图支撑的部分。
+
+| 能力 | 实现位置 | 证据 |
+| --- | --- | --- |
+| 13 条通道并发检索 + 单通道熔断 | `internal/searchdet/channels.go` | 通道清单与熔断门控均在代码中；`channelHits` 记录本次真实贡献 |
+| 30 种检索模式 | `internal/searchdet/modes.go` 的 `planFor` | `TestEveryModePlansDifferentWork` 要求 30 个计划两两不同 |
+| 判定与证据链 | `internal/searchdet/investigate.go` | 截图与轨迹 JSON 里的 `verdict`、`citations[]`、`trajectory[]` |
+| 合规红线 fail-closed | `internal/searchdet/compliance.go` | 词表读不到或为空时拒绝检索；`compliance_test.go` 钉住 |
+| 六后端 + 三阶段热插拔 | `internal/ragstore/` | `hotswap_test.go` 三个用例：双写期读不中断、哈希不符拒绝切换、切换后写入落到新库 |
+| 混合检索（余弦 + BM25 + RRF k=60，可选 rerank） | `internal/ragstore/` | `Hit` 同时返回 `cosine/bm25/rrf/rerank` |
+| 供应商平台（39 个，真实连通测试） | `internal/providerhub/`、`internal/gui/providerhub_api.go` | `RunProbe` 用保存的密钥真实调用厂商接口；无密钥返回“未配置”，不伪造延迟 |
+| stdio MCP（4 个工具） | `internal/mcpsearch/server.go` | `magpie_investigate` / `magpie_search_fast` / `magpie_debate` / `magpie_timeline` |
+| 端到端验证脚本 | `scripts/verify_real_engine.py` | 起独立进程跑未预置过的查询，断言真实引用、持久化、指纹、热插拔、导出与清理 |
+
+本机最近一次验证：`go test ./internal/searchdet/ ./internal/ragstore/ ./internal/mcpsearch/` 三个包全部通过；`verify_real_engine.py` 端到端断言 22/22 通过（验证日志不入库，脚本可自行复跑）。
+
+## 实测（进行中）
+
+> **当前不在 README 里声明任何基准分数。** 这一节只说明试点在哪、怎么复跑。
+
+小规模试点已跑完一轮，产物落在 [`demo/2026-10-25/benchmark/`](demo/2026-10-25/benchmark/)：
+
+- `frames-sample.json` — 抽样题目（数据集来源与抓取时间写在文件内）
+- `frames-runs.jsonl` — 逐题真实运行轨迹
+- `frames-summary.json` — 汇总指标
+- `report.md` — 逐题回查与自我批评
+
+试点结论写在 [`demo/2026-10-25/README.md`](demo/2026-10-25/README.md)，包括对判定器明显失分处的逐题分析。样本量小、判定器仍是词面启发式而非 NLI 模型，**不足以支撑任何对外分数**；等协议、样本量与判分器都稳定后再把数字搬进这里。
+
+## 快速开始（Windows）
+
+前置：Go 1.26+、WebView2 运行时。源码就在本仓库的 `magpie/` 里，克隆下来即可编译。
+
+```powershell
+# 1) 编译（在 magpie/ 里执行，产物放到仓库根目录）
+cd magpie
+go build -tags production -trimpath -ldflags="-s -w -X main.version=mola-v5" -o ..\molasearch.exe .
 ```
-            ┌────────────────────────────────────────────────────────┐
-            │                swarm_iterative_search                  │
-            │                                                        │
- Query ───▶ │  Planner ──分解──▶ Aspect×N（子查询+策略变体）           │
-            │     │                                                 │
-            │     ▼            ┌──────────────────────┐             │
-            │  Searcher Swarm（并行多路：公网/混合/行业/时效）│──▶ 语料  │
-            │     │            └──────────────────────┘             │
-            │     ▼                                                 │
-            │  Analyst（去重合并 + 方面覆盖率 + 盲区关键词）            │
-            │     │  覆盖率 ≥ 阈值？──是──▶ Synthesizer（汇总报告）     │
-            │     └──否──▶ 盲区派生精化子查询 ──▶ 下一轮迭代            │
-            └────────────────────────────────────────────────────────┘
+
+```powershell
+# 2) 起网页（后台进程，端口见下）
+powershell -ExecutionPolicy Bypass -File scripts\start-web.ps1
+
+# 3) 打开 http://127.0.0.1:3430/?k=<key>
+#    key 在 data\webkey.txt（首次启动自动生成，data/ 已被 gitignore）
 ```
 
-**动态 MCP**：工具集由 `enabledTools` + Swarm Profiles 驱动，`plugin_manage` 工具可在**运行时**启用/停用工具、注册/删除 Profile，并通过 `notifications/tools/list_changed` 即时通知客户端；启停状态与自定义 Profile 持久化到数据目录，重启后保留。配置文件 `.yuanbao-swarm.json` 亦可在启动时注入 Profile 与工具开关。
+| 端口 | 用途 |
+| --- | --- |
+| `127.0.0.1:3430` | 网页 / Detective 页面与 `/api/*` |
+| `127.0.0.1:3432` | 本发行版的 LLM 网关（OpenAI / Anthropic / Gemini 兼容） |
 
-## 快速开始
+默认端口刻意避开 magpie 常用的 `3425`，避免和机器上已有的 magpie 抢端口。`MAGPIE_ADDR` 可覆盖网关地址。
+
+其他入口：
+
+```powershell
+.\molasearch.exe                 # 桌面窗口
+.\molasearch.exe web             # 仅网页
+.\molasearch.exe mcp search      # 给 agent 的 stdio MCP 服务
+```
+
+> `magpie/` 是上游 fork 的源码，和发行层（脚本、SDK、插件包、技能、文档、演示产物）在同一个仓库里：克隆一次就能编译。它的上游基线是 `yetone/magpie`，许可证见 `magpie/LICENSE`（MIT）。
+
+## 元宝群智能体 MCP 插件（根目录）
+
+根目录的 Node/TypeScript 工程是一个独立的 MCP 插件：腾讯云「元宝搜索」（`wsa` SearchPro）+ **群智能体迭代搜索**。与上面的 Go 程序互不依赖，可单独构建运行。完整说明见 [`docs/yuanbao-swarm-mcp.md`](docs/yuanbao-swarm-mcp.md)。
 
 ```bash
 npm install
@@ -42,90 +107,114 @@ node dist/web/server.js
 # 浏览器打开 http://127.0.0.1:3210
 ```
 
-### 接入 MCP 客户端（如 ZCode / Claude Desktop / Cline）
+架构：`Planner → Searcher Swarm（并行多路）→ Analyst（去重合并 + 方面覆盖率 + 盲区关键词）→ 覆盖率不足则派生精化子查询进入下一轮 → Synthesizer`。
 
-复制 `mcp.json.example` 到客户端 MCP 配置（Windows 下 command 用 `node`、args 填 dist 绝对路径）。环境变量缺失时插件会启动失败并给出明确提示；设置 `YUANBAO_DRY_RUN=1` 可先体验干跑模式。
+四个工具：
 
-## Tools（4 个）
+| 工具 | 作用 |
+| --- | --- |
+| `yuanbao_search` | 单次检索，SearchPro 全参数对齐（`mode` / `site` / `cnt` / `industry` / `freshness` / `deeplinks`） |
+| `swarm_iterative_search` | 群智能体迭代深搜，支持 MCP progress 与请求取消 |
+| `swarm_history` | `list` / `get` 历史报告，同时暴露为资源 `yuanbao://history/{id}` |
+| `plugin_manage` | 动态 MCP 核心：运行时启停工具、注册/删除 Swarm Profile，并发 `notifications/tools/list_changed` |
 
-### `yuanbao_search` — 单次检索
-SearchPro 透传，**全参数对齐文档**：
+内置 Profile：`deep-research` / `news-scan` / `academic-dive` / `finance-watch` / `quick-look`。工程上零云 SDK 依赖（自实现 TC3-HMAC-SHA256 签名）、令牌桶限流、10 分钟 TTL+LRU 缓存、429 指数退避。凭证用 `TENCENTCLOUD_SECRET_ID` / `TENCENTCLOUD_SECRET_KEY`，与 Go 程序的 `TENCENT_SECRET_ID` / `TENCENT_SECRET_KEY` 是不同的变量名，可以同时存在。
 
-| 参数 | 约束（非法即拒绝） |
-|---|---|
-| `query` | 必填，≤100 字符 |
-| `mode` | `0` 公网全量 / `1` 优质权威垂源（旗舰）/ `2` 混合（旗舰） |
-| `site` | `"qq.com"` 指定；`"exclude:a.com\|b.com"` 排除（≤5 个域名） |
-| `cnt` | `10/20/30/40/50` |
-| `industry` | `gov/news/acad/finance` |
-| `freshness` | `d[1-30]` / `m[1-12]` / `y[1-5]` / `yyyy-mm-dd` / 区间 |
-| `deeplinks` | 旗舰版返回主站延伸子链接 |
+## 密钥
 
-返回：标题/URL/站点/日期/相关性得分/权威等级(0-5)/动态摘要/图片/延伸链接。
+复制 `.env.example` 为 `.env`，放在可执行文件旁或 `data/` 下。**全部可以留空**：免 Key 通道照常工作。
 
-### `swarm_iterative_search` — 群智能体迭代深搜
-| 参数 | 说明 |
-|---|---|
-| `query` | 研究问题；含 `，、vs 和 与 以及` 等分隔符时 Planner 按子主题分解 |
-| `profile` | 档位名（默认 `deep-research`） |
-| `max_rounds` / `max_subqueries` / `coverage_threshold` / `cnt` / `mode` / `site` / `industry` / `freshness` | 覆盖 Profile 的运行时参数 |
+| 变量名 | 用途 |
+| --- | --- |
+| `TENCENT_SECRET_ID` / `TENCENT_SECRET_KEY` | 腾讯云 WSA SearchPro（TC3 签名，成对使用） |
+| `TENCENT_WSA_API_KEY` | 元宝官方 MCP 端点的 Bearer（与上面那对是不同凭证） |
+| `TENCENTCLOUD_SECRET_ID` / `TENCENTCLOUD_SECRET_KEY` | 根目录元宝 MCP 插件的腾讯云凭证 |
+| `DEEPSEEK_API_KEY` | 回答模型 / 辩论裁判 |
+| `TAVILY_API_KEY` / `EXA_API_KEY` / `BRAVE_API_KEY` | 可选搜索 API |
+| `SEARXNG_URL` / `SEARXNG_API_KEY` | 自建 SearXNG |
+| `AMAP_KEY` | 高德地理编码与气象（留空走 Nominatim + Open-Meteo） |
+| `MOLA_EMBED_API_BASE` / `_API_KEY` / `_MODEL` | 远程 Embedding（留空用本地确定性哈希嵌入） |
+| `MOLA_RERANK_API_BASE` / `_API_KEY` / `_MODEL` | 远程 Reranker（留空保持 RRF 顺序） |
+| `MOLA_VISION_API_BASE` / `_API_KEY` / `_MODEL` | 远程图片描述（发送前重编码，EXIF/GPS 不出本机） |
+| `MOLA_PG_DSN` | Postgres / pgvector 后端连接串 |
+| `MAGPIE_WEB_KEY` | 网页登录 key（≥16 位） |
 
-流程：分解 → 并行多路检索（单路失败不拖垮整体）→ 去重合并（URL 归一化 + 标题 Jaccard>0.85）→ 覆盖率与盲区分析（CJK 二元组分词，无外部 NLP 依赖）→ **从实际返回标题和摘要提取新线索，结合原提示词生成下一轮针对性补搜**（过滤原词、虚词与重复查询，防循环）→ 收敛（覆盖率≥阈值 / 无精化查询 / 达轮次上限）→ 综合排序（0.6×相关性 + 0.25×权威 + 0.15×新鲜度）→ 输出报告：迭代轨迹、方面覆盖、发现聚类、关键事实、遗留盲区、引用列表。支持 MCP progress 进度通知与请求取消（`signal`）。
+`.env` 已在 `.gitignore` 中，密钥不会被提交。仓库里只有 `.env.example`，其中的值全部为空。
 
-### 3D 浏览器搜索页
-独立页面位于 `http://127.0.0.1:3210`，通过本地 NDJSON API 展示真实搜索阶段、结果和深度研究报告。六个元宝 Agent 使用绿色透明玻璃球建模，官方图标特征由动态白色面部承载；检索时流动、挤压、黏连并堆叠，规划/搜索/分析/汇总/完成/错误具有不同表情。支持减少动态效果、页面离屏暂停及 WebGL 不可用降级。凭证不进入浏览器。
+## 架构
 
-### `swarm_history` — 深搜历史
-`list` 最近记录 / `get` 按 ID 取完整报告；同时暴露为资源 `yuanbao://history/{id}`。
-
-### `plugin_manage` — 插件动态管理（动态 MCP 核心）
-`status` / `list_tools` / `enable_tool` / `disable_tool` / `list_profiles` / `register_profile` / `remove_profile` / `reload`。注册 Profile 示例：
-
-```json
-{ "action": "register_profile", "profile": {
-  "name": "my-policy-watch", "description": "政策监测", "strategy": "news",
-  "maxRounds": 3, "maxSubqueries": 4, "searchersPerQuery": 2,
-  "coverageThreshold": 0.8, "cnt": 20, "industry": "gov", "freshness": "m3" } }
+```text
+molasearch.exe
+├── internal/gui            /api/detective/*, /api/rag/*, /api/providerhub/*
+├── internal/searchdet      30 模式计划、13 通道、合规/脱敏、判定、多模态
+├── internal/ragstore       六后端、混合检索、热插拔、USMF、习惯
+├── internal/providerhub    39 个供应商注册表 + 真实连通探针
+├── internal/mcpsearch      stdio MCP 服务
+└── internal/pluginrt       插件运行时（Manifest / nav.page / client 资源）
 ```
 
-内置 Profile：`deep-research` / `news-scan` / `academic-dive` / `finance-watch` / `quick-look`。
+- **插件**：`plugins/detective`、`plugins/ragstore`、`plugins/providerhub` 三个内置插件分别提供侦探台、记忆与数据库、工具与供应商三个页面，经 `pluginrt` 注册、由 `plugins/all` 汇总导入。核心不反向依赖插件。
+- **依赖方向**：`ragstore` 可以引 `searchdet` 的引擎邻接类型，`searchdet` 不引 `ragstore`；共享记录类型在 `internal/usmf`，`Store` 接口不依赖引擎（`contract_test.go` 钉住）。
+- **本地 Postgres / pgvector**：`MOLA_PG_DSN` 指向一个带 `pgvector` 的库（示例部署 `127.0.0.1:15432/molasearch`）。该后端通过 pgx 真实读写行；服务不可达时自动回落到本地 SQLite 镜像，状态页显示 `不可用`。
 
-## Resources & Prompts
+## 截图
 
-- 资源：`yuanbao://server/info`（运行状态）、`yuanbao://history/{id}`（历史报告，模板资源）
-- 提示模板：`deep-research-brief`（一键深搜简报工作流）、`gap-followup`（对历史报告盲区补搜）
+| | |
+| --- | --- |
+| ![M13 侦探台](demo/2026-10-25/detective-m13-light-full.png) | ![供应商平台](demo/2026-10-25/providerhub-search-tencent-real.png) |
+| M13 真实查证结果（20 条引用，UNVERIFIED，6507 ms） | 工具与供应商：元宝 SearchPro 真实连通测试 |
+| ![基准图鉴](demo/2026-10-25/benchmark-landscape.png) | |
+| 公开基准设定对照；顶部试点数字标注为进行中，不作为结论 | |
 
-## 工程特性
+更多产物见 [`demo/2026-10-25/`](demo/2026-10-25/)：可复跑的轨迹 JSON、试点数据。
 
-- **零云 SDK 依赖**：自实现腾讯云 API 3.0（TC3-HMAC-SHA256）签名
-- 令牌桶限流（默认 5 QPS）、10 分钟 TTL+LRU 结果缓存（省每月 2000 次免费额度）、429/内部错误指数退避重试
-- 错误码透传：`InvalidParameter` / `RequestLimitExceeded` / `ResourceNotFound` / `UnauthorizedOperation` 等映射为 MCP `isError`
-- 日志全部走 stderr，stdout 专属 MCP 协议
+## SDK 与 Agent 接入
 
-## 配置
+`/api` 的契约以 `internal/gui/detective_api.go` 与 `rag_api.go` 为准，SDK 按它实现，默认 `http://127.0.0.1:3430`。
 
-环境变量：`TENCENTCLOUD_SECRET_ID` / `TENCENTCLOUD_SECRET_KEY` / `YUANBAO_ENDPOINT` / `YUANBAO_QPS` / `YUANBAO_TIMEOUT_MS` / `YUANBAO_MAX_RETRIES` / `YUANBAO_DRY_RUN` / `YUANBAO_DATA_DIR`。
-配置文件：`.yuanbao-swarm.json`（`enabledTools`、`profiles`）。优先级：进程环境变量 > `.env` > 配置文件 > 默认值。`.env` 由服务端自动加载，不会发送到浏览器。
+```python
+from molasearch import MolaSearchClient
 
-## 目录结构
-
-```
-src/
-├── index.ts              # 入口（stdio transport）
-├── config.ts             # 配置加载 + 内置 Profile
-├── core/                 # types / signer(TC3) / cache(TTL-LRU) / wsa-client
-├── swarm/                # planner / analyst / synthesizer / engine（迭代循环）
-├── mcp/                  # server(动态注册) / tools / extras(resources+prompts) / state(持久化)
-├── web/                  # 本地 NDJSON API + 静态文件服务
-└── util/                 # log(stderr) / text(分词·去重·历史存储)
-web/                      # Three.js 绿色玻璃球场景、页面交互与样式
-public/assets/            # 腾讯元宝官方图标与来源记录
-test/smoke.mjs            # stdio 全链路冒烟测试（干跑）
-test/regression-core.mjs  # API/缓存/取消/规划/分析/迭代回归
-test/regression.mjs       # 历史安全、配置、持久化与统计回归
-test/web.mjs              # Web API、静态资源与 NDJSON 回归
+c = MolaSearchClient(web_key="你的 MAGPIE_WEB_KEY")
+inv = c.investigate("北京今天有没有冰雹预警", mode_id="M11")
+print(inv["verdict"], len(inv["citations"]), inv["channelHits"])
 ```
 
-## License
+- Python / TypeScript 客户端：[`sdk/`](sdk/)
+- Claude Code 插件包与 DSH 插件包：[`plugins-pack/`](plugins-pack/)
+- 技能模板：[`skills/`](skills/)
 
-MIT
+## 已知边界
+
+- **只在 Windows 上真实构建与运行过。** 上游支持 macOS / Linux，但本发行版的验证都发生在 Windows + WebView2。
+- **有 Key 才有的通道**：腾讯 WSA、Tavily、Exa、Brave、SearXNG 需要密钥；其余免 Key 通道照常工作。
+- **远程后端不是全量真存储**：Postgres 通过 pgx 真实读写；Elasticsearch / Milvus / Neo4j 做真实协议探测与部分写入，行数据仍由本地 SQLite 镜像承载。
+- **判定器是启发式**：按覆盖度、权威源与权威加权正负信号打分，不是 NLI 模型；可信分不是校准概率。
+- **基准仍处试点**：见上文“实测（进行中）”，不声明分数。
+- **Agent 配置默认隔离**：启动脚本把 `USERPROFILE` / `HOME` 指向仓库内的 `agent-home/`，应用内的 Agent 页面看不到、也改不了本机真实的 `~/.claude`、`~/.codex` 等配置。
+- **品牌与标识**：窗口、托盘、页面标题已改为 MolaSearch；`MAGPIE_*` 环境变量、`magpie://` URL scheme 等技术与上游共用的标识刻意保留。
+
+## 仓库结构
+
+```text
+magpie/           上游 fork 的源码（Go），MolaSearch 的主体
+scripts/          启动与端到端验证脚本
+sdk/              Python / TypeScript 客户端
+plugins-pack/     Claude Code / DSH 插件打包
+skills/           注入给 agent 的技能模板与 30 模式目录
+proposals/        设计蓝图（未实现，不是现状）
+demo/             真实运行产物：截图、轨迹、试点数据
+docs/             文档与静态页；yuanbao-swarm-mcp.md 是根目录插件的完整说明
+
+src/              元宝群智能体 MCP 插件（TypeScript）
+web/              插件配套的 3D 搜索页（Three.js）
+public/assets/    腾讯元宝官方图标与来源记录
+test/             插件的 smoke / regression / web 回归测试
+dist/ dist-web/   插件与页面的构建产物
+```
+
+`proposals/` 里的内容是**设计**，与当前实现不一致时以实现为准。
+
+## 上游与许可
+
+MolaSearch 是 [magpie](https://github.com/yetone/magpie) 的发行版，上游为 MIT（© yetone），许可证随源码在 [`magpie/LICENSE`](magpie/LICENSE)。对上游的改动清单与 rebase 说明记录在 [`magpie/PATCHES.md`](magpie/PATCHES.md)。根目录的元宝 MCP 插件同为 MIT。
