@@ -159,6 +159,27 @@ def main():
               bool(m) and int(m.group(1)) == inv.get("totalLatencyMs"),
               f"briefing={m.group(1) if m else '?'} header={inv.get('totalLatencyMs')}")
 
+        # 1a) the report is composed from the finished run, not rendered later
+        # by the page: the run hands back a ReportModel with the same trace id.
+        rep = inv.get("report") or {}
+        check("investigation returns a composed report",
+              bool(rep.get("reportId")) and rep.get("traceId") == inv.get("traceId")
+              and bool(rep.get("sections")) and "timeline" in rep,
+              f"reportId={rep.get('reportId')} trace={rep.get('traceId')}")
+        rid = str(rep.get("reportId", ""))
+        if rid:
+            code, listed = http("GET", f"http://{args.addr}/api/detective/reports")
+            rows = (listed or {}).get("reports", []) if isinstance(listed, dict) else []
+            check("the report is saved and listed",
+                  code == 200 and any(str(r.get("reportId")) == rid for r in rows),
+                  f"HTTP {code}, {len(rows)} saved")
+            code, one = http("GET", f"http://{args.addr}/api/detective/reports/{rid}")
+            check("the saved report reopens without re-running",
+                  code == 200 and str((one or {}).get("reportId")) == rid,
+                  f"HTTP {code}")
+            code, _ = http("GET", f"http://{args.addr}/api/detective/reports/{rid}/export")
+            check("the saved report exports", code == 200, f"HTTP {code}")
+
         # 2a) the Tencent WSA channel on the live vendor API. Its version,
         # signature and payload are the vendor's own contract, so it is asked
         # alone here: a keyless channel answering instead would hide a broken
@@ -257,6 +278,19 @@ def main():
         check("rag status lists six backends",
               code == 200 and len(st.get("backends", [])) == 6,
               f"HTTP {code}, {len(st.get('backends', [])) if isinstance(st, dict) else '?'} backends")
+        code, pn = http("GET", f"http://{args.addr}/api/rag/panels")
+        panels = pn if isinstance(pn, dict) else {}
+        check("the six database panels are served",
+              code == 200 and len(panels.get("backends", [])) == 6
+              and all(k in panels for k in ("graph", "vectors", "documents", "relational", "lexical", "records")),
+              f"HTTP {code}, keys={sorted(panels)[:8]}")
+        # `points` is the projected point list itself, not a count.
+        pts = (panels.get("vectors") or {}).get("points")
+        n_pts = len(pts) if isinstance(pts, list) else (pts if isinstance(pts, int) else 0)
+        check("the panels carry real backend data, not placeholders",
+              isinstance(panels.get("records"), list) and len(panels.get("records") or []) > 0
+              and n_pts > 0,
+              f"{len(panels.get('records') or [])} records, {n_pts} projected points")
         code, sw = http("POST", f"http://{args.addr}/api/rag/hotswap",
                         {"targetDbId": "markdown_vault", "embeddingModel": "local-ngram-1024"})
         swap = (sw or {}).get("swap", {}) if isinstance(sw, dict) else {}
